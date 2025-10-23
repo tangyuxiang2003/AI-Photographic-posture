@@ -1,0 +1,128 @@
+<view class="profile-page">
+  <!-- 标题 -->
+  <view class="section-title">
+    <text>个人中心</text>
+  </view>
+
+  <!-- 档案卡片（静态） -->
+  <view class="profile-card">
+    <view class="profile-left">
+      <view class="avatar-wrap">
+        <image wx:if="{{profile.hasAuth && profile.avatarUrl}}" class="avatar" src="{{profile.avatarUrl}}" mode="aspectFill"></image>
+        <view wx:else class="avatar placeholder"></view>
+      </view>
+      <view class="profile-info">
+        <view class="nickname-row">
+          <view class="nickname">{{profile.hasAuth ? profile.nickName : '未登录'}}</view>
+          <view class="level-pill">Lv.1</view>
+        </view>
+        <view class="auth-tip">{{profile.hasAuth ? '已授权头像昵称' : '未登录，点击下方按钮授权头像昵称'}}</view>
+        <view class="progress">
+          <view class="progress-bar" style="width: 20%;"></view>
+        </view>
+      </view>
+    </view>
+    <button class="btn-mini primary" size="mini" bindtap="onGetUserProfile">{{profile.hasAuth ? '已登录' : '点击登录'}}</button>
+  </view>
+
+  <!-- 统计卡片（静态） -->
+  <view class="stats-card">
+    <view class="stat-item">
+      <view class="stat-num">0</view>
+      <view class="stat-label">照片</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-num">0</view>
+      <view class="stat-label">收藏</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-num">0</view>
+      <view class="stat-label">关注</view>
+    </view>
+  </view>
+
+  <!-- 设置（静态） -->
+  <view class="section-title small">
+    <text>设置</text>
+  </view>
+  <view class="settings-card">
+    <view class="setting-row">
+      <view class="setting-texts">
+        <view class="setting-title">高清保存</view>
+        <view class="setting-sub">保存更清晰的图像（占用更大存储）</view>
+      </view>
+      <switch checked="true" disabled="true"></switch>
+    </view>
+    <view class="setting-row">
+      <view class="setting-texts">
+        <view class="setting-title">展示拍照小技巧</view>
+        <view class="setting-sub">首页展示姿势灵感与小贴士</view>
+      </view>
+      <switch checked="true" disabled="true"></switch>
+    </view>
+    <view class="setting-row no-border">
+      <view class="setting-texts">
+        <view class="setting-title">深色模式</view>
+        <view class="setting-sub">夜间更护眼（示例，后续接入系统主题）</view>
+      </view>
+      <switch checked="false" disabled="true"></switch>
+    </view>
+  </view>
+
+  <!-- 常用功能（静态） -->
+  <view class="section-title small">
+    <text>常用功能</text>
+  </view>
+  <view class="action-list">
+    <!-- 1. 我的收藏 -->
+    <view class="action-item">
+      <view class="action-left">
+        <image class="action-icon" src="../../images/icons/goods.png" mode="aspectFit"></image>
+        <view class="action-text">我的收藏</view>
+      </view>
+      <view class="action-right"><text class="action-arrow">›</text></view>
+    </view>
+    <!-- 2. 浏览历史 -->
+    <view class="action-item">
+      <view class="action-left">
+        <image class="action-icon" src="../../images/icons/examples.png" mode="aspectFit"></image>
+        <view class="action-text">浏览历史</view>
+      </view>
+      <view class="action-right"><text class="action-arrow">›</text></view>
+    </view>
+    <!-- 3. 用户建议（原“给你一点儿建议”） -->
+    <view class="action-item">
+      <view class="action-left">
+        <image class="action-icon" src="../../images/icons/customer-service.svg" mode="aspectFit"></image>
+        <view class="action-text">用户建议</view>
+      </view>
+      <view class="action-right"><text class="action-arrow">›</text></view>
+    </view>
+    <!-- 4. 账号与安全 -->
+    <view class="action-item">
+      <view class="action-left">
+        <image class="action-icon" src="../../images/icons/usercenter.png" mode="aspectFit"></image>
+        <view class="action-text">账号与安全</view>
+      </view>
+      <view class="action-right"><text class="action-arrow">›</text></view>
+    </view>
+    <!-- 5. 设置中心 -->
+    <view class="action-item">
+      <view class="action-left">
+        <image class="action-icon" src="../../images/icons/setting.svg" mode="aspectFit"></image>
+        <view class="action-text">设置中心</view>
+      </view>
+      <view class="action-right"><text class="action-arrow">›</text></view>
+    </view>
+    <!-- 6. 关于 -->
+    <view class="action-item">
+      <view class="action-left">
+        <image class="action-icon" src="../../images/icons/question.svg" mode="aspectFit"></image>
+        <view class="action-text">关于</view>
+      </view>
+      <view class="action-right"><text class="action-arrow">›</text></view>
+    </view>
+  </view>
+
+
+</view>

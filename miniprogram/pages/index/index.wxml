@@ -1,0 +1,72 @@
+<!-- AI 拍照姿势建议 - 原型首页（柔和淡色系） -->
+<view class="home">
+  <!-- 欢迎文案（单行、稍加粗） -->
+  <view class="welcome single">
+    欢迎使用AI拍照助手！
+    <view class="welcome-sub">一起解锁属于你的个性姿势</view>
+  </view>
+
+  <!-- 上传点击框（单入口），点击弹出相册/拍摄 -->
+  <view class="upload-box" bindtap="onTapUpload">
+    <view class="upload-center">
+      <image class="cam-svg" src="../../images/icons/camera.svg" mode="widthFix"></image>
+      <text class="upload-text">人景实照</text>
+
+    </view>
+  </view>
+
+  <!-- 中间预览框：仅在有图片时显示 -->
+  <view wx:if="{{previewPaths.length}}" class="mid-gallery">
+    <view class="mg-bar" wx:if="{{selectMode}}">
+      <view class="mg-actions-row">
+        <button class="mg-btn cancel" bindtap="onExitSelect">取消</button>
+        <button class="mg-btn delete" bindtap="onDeleteSelected">删除</button>
+      </view>
+      <view class="mg-tip-row">已选 {{selectedCount}} 张</view>
+    </view>
+    <view class="mg-grid">
+      <block wx:for="{{previewPaths}}" wx:key="src">
+        <view class="thumb {{item.selected ? 'selected' : ''}}"
+              data-index="{{index}}"
+              bindtap="onTapThumb"
+              bindlongpress="onLongPressThumb">
+          <image class="thumb-img" src="{{item.src}}" mode="aspectFill"></image>
+          <view class="check" wx:if="{{selectMode}}">
+            <text wx:if="{{item.selected}}" class="tick">√</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 大号文本输入框 -->
+  <textarea class="desc-input"
+            placeholder="描述你期望的姿势、风格、情绪等（可选）"
+            maxlength="200"
+            auto-height="true"
+            value="{{expectDesc}}"
+            bindinput="onDescInput"></textarea>
+
+  <!-- 开始分析按钮（位于描述框下方） -->
+  <button class="analyze-btn" bindtap="onAnalyze">开始分析</button>
+
+  <!-- 热门姿势关键词（少女风粉色标签） -->
+  <view class="section-title">
+    <text>热门姿势关键词</text>
+    <view class="refresh-btn" bindtap="onRefreshChips">换一批</view>
+  </view>
+  <view class="chip-wrap">
+    <text class="chip" wx:for="{{hotChips}}" wx:key="*this" data-word="{{item}}" bindtap="onTapChip">{{item}}</text>
+  </view>
+
+  <!-- 拍照小贴士（柔和卡片） -->
+  <view class="section-title">
+    <text>姿势句子灵感</text>
+    <view class="refresh-btn" bindtap="onRefreshTips">换一批</view>
+  </view>
+  <view class="tips">
+    <view class="tips-item" wx:for="{{tipsItems}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <!-- 选中预览（已由中间预览框替代） -->
+</view>

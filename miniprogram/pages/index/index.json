@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "基础能力",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "cloud-tip-modal": "/components/cloudTipModal/index"
+  }
+}
