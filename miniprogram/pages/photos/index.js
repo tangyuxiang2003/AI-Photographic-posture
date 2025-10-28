@@ -1,5 +1,7 @@
 Page({
   data: {
+    // 全局主题背景色
+    themeBg: '#FFF7FA',
     query: '',
     activeTab: '全部',
     favorites: [
@@ -49,8 +51,90 @@ Page({
     filtered: []
   },
 
+  // 预处理：为每条收藏预计算 searchText，减少筛选时字符串拼接与大小写转换
+  normalizeFavorites(arr = []){
+    return (arr || []).map(it => ({
+      ...it,
+      searchText: ((it.title ? it.title : '') + ' ' + (Array.isArray(it.tags) ? it.tags.join(' ') : '')).toLowerCase()
+    }))
+  },
+
   onLoad(){
-    this.computeFiltered()
+    // 同步主题背景
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
+      this.applyThemeColor(bg);
+    } catch (e) {}
+    try{
+      const cached = wx.getStorageSync('app_favorites')
+      const base = Array.isArray(cached) && cached.length ? cached : this.data.favorites
+      const normalized = this.normalizeFavorites(base)
+      this.setData({ favorites: normalized }, () => {
+        this.computeFiltered()
+        wx.showShareMenu({ withShareTicket: true })
+      })
+    }catch(_){
+      this.computeFiltered()
+      wx.showShareMenu({ withShareTicket: true })
+    }
+  },
+
+  onShow(){
+    // 同步主题背景
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
+      this.applyThemeColor(bg);
+    } catch (e) {}
+  },
+
+  // 应用主题背景到导航栏、页面与底部tabBar
+  applyThemeColor(backgroundColor) {
+    const frontColor = this.getContrastingText(backgroundColor);
+    try {
+      wx.setNavigationBarColor({
+        frontColor,
+        backgroundColor,
+        animation: { duration: 200, timingFunc: 'easeIn' }
+      });
+    } catch (e) {}
+    // 同步 tabBar 背景
+    try {
+      wx.setTabBarStyle({
+        backgroundColor,
+        borderStyle: frontColor === '#ffffff' ? 'white' : 'black',
+        color: frontColor === '#ffffff' ? '#e6e6e6' : '#666666',
+        selectedColor: '#07C160'
+      });
+    } catch (e) {}
+    try {
+      wx.setBackgroundColor({
+        backgroundColor,
+        backgroundColorTop: backgroundColor,
+        backgroundColorBottom: backgroundColor
+      });
+    } catch (e) {}
+  },
+
+  // 根据背景色自动选择黑/白前景色
+  getContrastingText(hex) {
+    const norm = (h) => {
+      if (!h) return '#000000';
+      let s = h.toString().trim();
+      if (s[0] !== '#') s = '#' + s;
+      if (s.length === 4) {
+        const r = s[1], g = s[2], b = s[3];
+        s = '#' + r + r + g + g + b + b;
+      }
+      return s.slice(0, 7);
+    };
+    const c = norm(hex);
+    const r = parseInt(c.substr(1, 2), 16);
+    const g = parseInt(c.substr(3, 2), 16);
+    const b = parseInt(c.substr(5, 2), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 160 ? '#000000' : '#ffffff';
   },
 
   onSetTab(e){
@@ -59,7 +143,12 @@ Page({
   },
 
   onSearchInput(e){
-    this.setData({ query: e.detail.value }, this.computeFiltered)
+    const val = e.detail.value
+    this.setData({ query: val })
+    if (this._debTimer) clearTimeout(this._debTimer)
+    this._debTimer = setTimeout(() => {
+      this.computeFiltered()
+    }, 250)
   },
 
   onClearSearch(){
@@ -69,9 +158,10 @@ Page({
   computeFiltered(){
     const { favorites, activeTab, query } = this.data
     const q = (query || '').trim().toLowerCase()
-    const list = favorites.filter(it => {
-      const okTab = activeTab === '全部' ? true : (it.type === activeTab || it.tags.includes(activeTab))
-      const text = (it.title + ' ' + it.tags.join(' ')).toLowerCase()
+    const list = (favorites || []).filter(it => {
+      const tags = Array.isArray(it?.tags) ? it.tags : []
+      const okTab = activeTab === '全部' ? true : (it?.type === activeTab || tags.includes(activeTab))
+      const text = it?.searchText || (((it?.title || '') + ' ' + tags.join(' ')).toLowerCase())
       const okQuery = q ? text.includes(q) : true
       return okTab && okQuery
     })
@@ -81,6 +171,7 @@ Page({
   onToggleFavorite(e){
     const id = e.currentTarget.dataset.id
     const next = this.data.favorites.filter(it => it.id !== id)
+    try { wx.setStorageSync('app_favorites', next) } catch(_) {}
     this.setData({ favorites: next }, this.computeFiltered)
     wx.showToast({ title: '已取消收藏', icon: 'none' })
   },
@@ -97,5 +188,25 @@ Page({
     arr.sort(() => 0.5 - Math.random())
     this.setData({ favorites: arr }, this.computeFiltered)
     wx.showToast({ title: '已为你推荐新顺序', icon: 'none' })
+  },
+
+  // 微信分享给好友/群聊
+  onShareAppMessage(options){
+    // 来自页面内“分享”按钮
+    if (options && options.from === 'button' && options.target && options.target.dataset) {
+      const id = options.target.dataset.id
+      const item = (this.data.favorites || []).find(x => x.id === id) || {}
+      return {
+        title: item.title || 'AI 摄影姿势收藏',
+        path: '/pages/photos/index?shareId=' + (id || ''),
+        imageUrl: item.cover || ''
+      }
+    }
+    // 右上角菜单分享的默认内容
+    return {
+      title: '我的摄影姿势收藏',
+      path: '/pages/photos/index',
+      imageUrl: ''
+    }
   }
 })

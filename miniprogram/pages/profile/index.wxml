@@ -1,4 +1,4 @@
-<view class="profile-page">
+<view class="profile-page" style="background: {{themeBg}};">
   <!-- 标题 -->
   <view class="section-title">
     <text>个人中心</text>
@@ -16,13 +16,19 @@
           <view class="nickname">{{profile.hasAuth ? profile.nickName : '未登录'}}</view>
           <view class="level-pill">Lv.1</view>
         </view>
-        <view class="auth-tip">{{profile.hasAuth ? '已授权头像昵称' : '未登录，点击下方按钮授权头像昵称'}}</view>
+        <view class="auth-tip">{{profile.hasAuth ? '已授权头像昵称' : '未登录，请授权头像昵称'}}</view>
         <view class="progress">
           <view class="progress-bar" style="width: 20%;"></view>
         </view>
       </view>
     </view>
-    <button class="btn-mini primary" size="mini" bindtap="onGetUserProfile">{{profile.hasAuth ? '已登录' : '点击登录'}}</button>
+    <view wx:if="{{!profile.hasAuth}}" style="display:flex; flex-direction:column; gap:16rpx; align-items:flex-start;">
+      <!-- 选择头像 + 输入昵称（隐私合规） -->
+      <button class="btn-mini" size="mini" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">选择头像</button>
+      <input class="nickname-input" type="nickname" placeholder="请输入昵称"
+             bindinput="onNicknameInput" confirm-type="done" />
+      <button class="btn-mini primary" size="mini" bindtap="onTapProfileLogin">点击登录</button>
+    </view>
   </view>
 
   <!-- 统计卡片（静态） -->
@@ -51,21 +57,33 @@
         <view class="setting-title">高清保存</view>
         <view class="setting-sub">保存更清晰的图像（占用更大存储）</view>
       </view>
-      <switch checked="true" disabled="true"></switch>
+      <switch checked="true" disabled="true" color="{{switchOnColor}}"></switch>
     </view>
     <view class="setting-row">
       <view class="setting-texts">
         <view class="setting-title">展示拍照小技巧</view>
-        <view class="setting-sub">首页展示姿势灵感与小贴士</view>
+        <view class="setting-sub">首页展示关键词与姿势灵感</view>
       </view>
-      <switch checked="true" disabled="true"></switch>
+      <switch checked="{{tipsEnabled}}" bindchange="onToggleTipsEnable" color="{{switchOnColor}}"></switch>
     </view>
-    <view class="setting-row no-border">
+    <view class="setting-row">
       <view class="setting-texts">
-        <view class="setting-title">深色模式</view>
-        <view class="setting-sub">夜间更护眼（示例，后续接入系统主题）</view>
+        <view class="setting-title">背景主题色</view>
+        <view class="setting-sub">从调色盘选择你喜欢的背景色</view>
       </view>
-      <switch checked="false" disabled="true"></switch>
+      <view style="display:flex; align-items:center; gap:16rpx;">
+        <view class="color-preview" style="background: {{themeBg}};"></view>
+        <switch checked="{{themeEnabled}}" bindchange="onToggleThemeEnable" color="{{switchOnColor}}"></switch>
+      </view>
+    </view>
+    <view class="color-palette" wx:if="{{themeEnabled}}">
+      <block wx:for="{{palette}}" wx:key="*this">
+        <view class="color-swatch {{item === themeBg ? 'selected' : ''}}"
+              style="background: {{item}};"
+              data-color="{{item}}"
+              bindtap="onPickTheme">
+        </view>
+      </block>
     </view>
   </view>
 
@@ -75,7 +93,7 @@
   </view>
   <view class="action-list">
     <!-- 1. 我的收藏 -->
-    <view class="action-item">
+    <view class="action-item" bindtap="onTapMyFavorites">
       <view class="action-left">
         <image class="action-icon" src="../../images/icons/goods.png" mode="aspectFit"></image>
         <view class="action-text">我的收藏</view>

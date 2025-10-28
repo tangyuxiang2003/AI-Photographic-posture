@@ -1,4 +1,4 @@
-<view class="wrap">
+<view class="wrap" style="background: {{themeBg}};">
   <!-- 统计与操作 -->
   <view class="stats-bar">
     <view class="stats-text">已收藏：{{favorites.length}} 条</view>
@@ -35,14 +35,20 @@
           </view>
           <view class="actions">
             <button class="btn unfav" data-id="{{item.id}}" bindtap="onToggleFavorite">取消收藏</button>
-            <button class="btn share" data-id="{{item.id}}" bindtap="onShare">分享</button>
+            <button class="btn share" data-id="{{item.id}}" open-type="share">分享</button>
           </view>
         </view>
       </view>
     </block>
   </view>
 
-  <!-- 空状态 -->
+  <!-- 空状态：无匹配 -->
+  <view wx:elif="{{favorites.length && !filtered.length}}" class="empty">
+    <view class="empty-title">无匹配结果</view>
+    <view class="empty-tip">换个关键词或切换标签试试～</view>
+  </view>
+
+  <!-- 空状态：无收藏 -->
   <view wx:else class="empty">
     <view class="empty-title">还没有收藏</view>
     <view class="empty-tip">去首页挑选姿势建议，点击收藏即可在这里查看哦～</view>

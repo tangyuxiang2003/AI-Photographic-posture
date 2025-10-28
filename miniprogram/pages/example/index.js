@@ -119,40 +119,27 @@ Page({
 
   deleteRecord(e) {
     console.log("deleteRecord e", e);
-    // 调用云函数删除记录
-    wx.showLoading({
-      title: "删除中...",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "deleteRecord",
-          data: {
-            _id: e.currentTarget.dataset.id,
-          },
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "删除成功",
-        });
-        this.getRecord(); // 刷新列表
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.showToast({
-          title: "删除失败",
-          icon: "none",
-        });
-        wx.hideLoading();
-      });
-    // const index = e.currentTarget.dataset.index;
-    // const record = this.data.record;
-    // record.splice(index, 1);
-    // this.setData({
-    //   record,
-    // });
+    wx.showLoading({ title: "删除中..." });
+    try {
+      const id = e.currentTarget.dataset.id;
+      let rec = [];
+      try {
+        rec = wx.getStorageSync("app_example_records") || [];
+        if (!Array.isArray(rec)) rec = [];
+      } catch (err) {
+        rec = [];
+      }
+      const next = rec.filter((it) => it && it._id !== id);
+      try {
+        wx.setStorageSync("app_example_records", next);
+      } catch (_) {}
+      wx.showToast({ title: "删除成功" });
+      this.getRecord(); // 刷新列表
+    } catch (err) {
+      wx.showToast({ title: "删除失败", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   // 输入框事件
@@ -179,17 +166,23 @@ Page({
     }
     wx.showLoading({ title: "插入中..." });
     try {
-      await wx.cloud.callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "insertRecord",
-          data: {
-            region: insertRegion,
-            city: insertCity,
-            sales: Number(insertSales),
-          },
-        },
-      });
+      let rec = [];
+      try {
+        rec = wx.getStorageSync("app_example_records") || [];
+        if (!Array.isArray(rec)) rec = [];
+      } catch (_) {
+        rec = [];
+      }
+      const item = {
+        _id: "id_" + Date.now() + "_" + Math.floor(Math.random() * 1e5),
+        region: insertRegion,
+        city: insertCity,
+        sales: Number(insertSales),
+      };
+      const next = rec.concat(item);
+      try {
+        wx.setStorageSync("app_example_records", next);
+      } catch (_) {}
       wx.showToast({ title: "插入成功" });
       this.setData({ showInsertModal: false });
       this.getRecord(); // 刷新列表
@@ -201,45 +194,15 @@ Page({
   },
 
   getOpenId() {
-    wx.showLoading({
-      title: "",
+    wx.showLoading({ title: "" });
+    // 使用 wx.login 的 code 或本地生成 openid 作为占位
+    wx.login({
+      success: (res) => {
+        const oid = res.code ? `LOCAL_OPENID_${res.code}` : `LOCAL_OPENID_${Date.now()}`;
+        this.setData({ haveGetOpenId: true, openId: oid });
+      },
+      complete: () => wx.hideLoading(),
     });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getOpenId",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetOpenId: true,
-          openId: resp.result.openid,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
   },
 
   clearOpenId() {
@@ -257,45 +220,12 @@ Page({
   },
 
   getCodeSrc() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getMiniProgramCode",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetCodeSrc: true,
-          codeSrc: resp.result,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
+    wx.showLoading({ title: "" });
+    // 使用公开二维码服务生成可展示图片
+    const data = encodeURIComponent("pages/index/index");
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${data}`;
+    this.setData({ haveGetCodeSrc: true, codeSrc: url });
+    wx.hideLoading();
   },
 
   clearCodeSrc() {
@@ -315,29 +245,19 @@ Page({
   },
 
   getRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "selectRecord",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetRecord: true,
-          record: resp.result.data,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        this.setData({
-          showTip: true,
-        });
-        wx.hideLoading();
-      });
+    wx.showLoading({ title: "" });
+    try {
+      let rec = [];
+      try {
+        rec = wx.getStorageSync("app_example_records") || [];
+        if (!Array.isArray(rec)) rec = [];
+      } catch (_) {
+        rec = [];
+      }
+      this.setData({ haveGetRecord: true, record: rec });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   clearRecord() {
@@ -347,62 +267,35 @@ Page({
     });
   },
   updateRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "updateRecord",
-          data: this.data.record,
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "更新成功",
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        console.log(e);
-        this.setData({
-          showUploadTip: true,
-        });
-        wx.hideLoading();
-      });
+    wx.showLoading({ title: "" });
+    try {
+      const rec = Array.isArray(this.data.record) ? this.data.record : [];
+      try {
+        wx.setStorageSync("app_example_records", rec);
+      } catch (_) {}
+      wx.showToast({ title: "更新成功" });
+    } catch (e) {
+      console.log(e);
+      this.setData({ showUploadTip: true });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   uploadImg() {
-    wx.showLoading({
-      title: "",
-    });
-    // 让用户选择一张图片
+    wx.showLoading({ title: "" });
+    // 让用户选择一张图片并直接显示临时路径
     wx.chooseMedia({
       count: 1,
       success: (chooseResult) => {
-        // 将图片上传至云存储空间
-        wx.cloud
-          .uploadFile({
-            // 指定上传到的云路径
-            cloudPath: `my-photo-${new Date().getTime()}.png`,
-            // 指定要上传的文件的小程序临时文件路径
-            filePath: chooseResult.tempFiles[0].tempFilePath,
-          })
-          .then((res) => {
-            console.log("upload res", res);
-            this.setData({
-              haveGetImgSrc: true,
-              imgSrc: res.fileID,
-            });
-          })
-          .catch((e) => {
-            console.log("e", e);
-          });
+        const path = chooseResult?.tempFiles?.[0]?.tempFilePath || "";
+        if (path) {
+          this.setData({ haveGetImgSrc: true, imgSrc: path });
+        } else {
+          wx.showToast({ title: "未选择图片", icon: "none" });
+        }
       },
-      complete: () => {
-        wx.hideLoading();
-      },
+      complete: () => wx.hideLoading(),
     });
   },
 
@@ -421,148 +314,116 @@ Page({
   },
   runCallContainer: async function () {
     const app = getApp();
-    console.log("globalData", app.globalData);
-    const c1 = new wx.cloud.Cloud({
-      resourceEnv: app.globalData.env,
-    });
-    await c1.init();
-    const r = await c1.callContainer({
-      path: "/api/users", // 填入业务自定义路径
-      header: {
-        "X-WX-SERVICE": "express-test", // 填入服务名称
-      },
-      // 其余参数同 wx.request
-      method: "GET",
-    });
-    console.log(r);
-    this.setData({
-      haveGetCallContainerRes: true,
-      callContainerResStr: `${JSON.stringify(r.data.items, null, 2)}`,
-    });
+    const base = app?.globalData?.apiBase || "";
+    if (base) {
+      wx.request({
+        url: `${base}/api/users`,
+        method: "GET",
+        success: (r) => {
+          const items = r?.data?.items || r?.data || [];
+          this.setData({
+            haveGetCallContainerRes: true,
+            callContainerResStr: `${JSON.stringify(items, null, 2)}`,
+          });
+        },
+        fail: () => {
+          // 请求失败则回退本地模拟
+          const items = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
+          this.setData({
+            haveGetCallContainerRes: true,
+            callContainerResStr: `${JSON.stringify(items, null, 2)}`,
+          });
+        },
+      });
+    } else {
+      // 未配置后端时本地模拟数据
+      const items = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
+      this.setData({
+        haveGetCallContainerRes: true,
+        callContainerResStr: `${JSON.stringify(items, null, 2)}`,
+      });
+    }
   },
   getCallcbrCode: function () {
     const app = getApp();
     this.setData({
-      callcbrCode: `const c1 = new wx.cloud.Cloud({
-  resourceEnv: ${app.globalData.env}
-})
-await c1.init()
-const r = await c1.callContainer({
-  path: '/api/users', // 此处填入业务自定义路径， /api/users 为示例路径
-  header: {
-    'X-WX-SERVICE': 'express-test', // 填入业务服务名称，express-test 为示例服务
-  },
-  // 其余参数同 wx.request
-  method: 'GET',
-})`,
+      callcbrCode: `// 使用普通后端接口（非云开发）
+const app = getApp()
+const base = app?.globalData?.apiBase || ''
+if (base) {
+  wx.request({
+    url: base + '/api/users',
+    method: 'GET',
+    success: (r) => {
+      const items = r?.data?.items || r?.data || []
+      console.log(items)
+    }
+  })
+} else {
+  // 未配置后端时使用本地模拟数据
+  const items = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]
+  console.log(items)
+}`,
     });
   },
   getInitEnvCode: function () {
     const app = getApp();
     this.setData({
-      initEnvCode: `wx.cloud.init({
-  env: ${app.globalData.env},
-  traceUser: true,
-});`,
+      initEnvCode: `// 已停用云开发，无需 wx.cloud.init
+// 可在 app.js 全局配置普通后端地址
+App({
+  onLaunch() {
+    this.globalData = { apiBase: 'https://your.api.server' }
+  }
+})`,
     });
   },
   getCreateCollectionCode: function () {
     this.setData({
-      callCreateCollectionCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-const db = cloud.database();
-// 创建集合云函数入口函数
-exports.main = async (event, context) => {
-  try {
-    // 创建集合
-    await db.createCollection('sales');
-    return {
-      success: true
-    };
-  } catch (e) {
-    return {
-      success: true,
-      data: 'create collection success'
-    };
+      callCreateCollectionCode: `// 使用本地存储模拟创建集合（非云开发）
+try {
+  const init = wx.getStorageSync('app_example_records')
+  if (!Array.isArray(init)) {
+    wx.setStorageSync('app_example_records', [])
   }
-};`,
+} catch (e) {
+  wx.setStorageSync('app_example_records', [])
+}
+console.log('create collection success')`,
     });
   },
   getOpenIdCode: function () {
     this.setData({
-      callOpenIdCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取openId云函数入口函数
-exports.main = async (event, context) => {
-  // 获取基础信息
-  const wxContext = cloud.getWXContext();
-  return {
-    openid: wxContext.OPENID,
-    appid: wxContext.APPID,
-    unionid: wxContext.UNIONID,
-  };
-};`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getOpenId'
+      callOpenIdCode: `// 使用 wx.login 获取 code，并生成本地占位 openid（非云开发）
+wx.login({
+  success: (res) => {
+    const openid = res.code ? 'LOCAL_OPENID_' + res.code : 'LOCAL_OPENID_' + Date.now()
+    console.log(openid)
   }
-}).then((resp) => console.log(resp))`,
+})`,
+      callFunctionCode: `// 页面内直接调用
+this.getOpenId()`,
     });
   },
   getMiniProgramCode: function () {
     this.setData({
-      callMiniProgramCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取小程序二维码云函数入口函数
-exports.main = async (event, context) => {
-  // 获取小程序二维码的buffer
-  const resp = await cloud.openapi.wxacode.get({
-    path: 'pages/index/index'
-  });
-  const { buffer } = resp;
-  // 将图片上传云存储空间
-  const upload = await cloud.uploadFile({
-    cloudPath: 'code.png',
-    fileContent: buffer
-  });
-  return upload.fileID;
-};
-`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getMiniProgramCode'
-  }
-}).then((resp) => console.log(resp))`,
+      callMiniProgramCode: `// 使用公开二维码服务生成可展示图片 URL（非云开发）
+const data = encodeURIComponent('pages/index/index')
+const url = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + data
+console.log(url)`,
+      callFunctionCode: `// 页面内直接调用
+this.getCodeSrc()`,
     });
   },
   getUploadFileCode: function () {
     this.setData({
-      callUploadFileCode: `wx.chooseMedia({
-count: 1,
-success: (chooseResult) => {
-  // 将图片上传至云存储空间
-  wx.cloud
-    .uploadFile({
-      // 指定上传到的云路径
-      cloudPath: "my-photo.png",
-      // 指定要上传的文件的小程序临时文件路径
-      filePath: chooseResult.tempFiles[0].tempFilePath,
-    })
-    .then((res) => {
-      console.log(res)
-    })
-    .catch((e) => {
-      console.log('e', e)
-    });
-}
+      callUploadFileCode: `// 选择图片并使用临时路径展示（非云开发）
+wx.chooseMedia({
+  count: 1,
+  success: (chooseResult) => {
+    const path = chooseResult?.tempFiles?.[0]?.tempFilePath
+    console.log(path)
+  }
 });`,
     });
   },

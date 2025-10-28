@@ -57,10 +57,22 @@ Page({
       settings: '/miniprogram/images/icons/setting.svg',
       feedback: '/miniprogram/images/icons/customer-service.svg',
       about: '/miniprogram/images/icons/question.svg'
-    }
+    },
+    showAuthOverlay: false,
+    authBypassed: false,
+    // 未登录可免费生成一次姿势推荐的标记
+    freeAnalyzeUsed: false,
+    // 受个人中心“展示拍照小技巧”开关联动控制
+    homeTipsEnabled: true,
+    // 全局主题背景色
+    themeBg: '#FFF7FA'
   },
 
   onTapUpload() {
+    if (!this.data.profile.hasAuth && !this.data.authBypassed) {
+      this.setData({ showAuthOverlay: true })
+      return
+    }
     wx.showActionSheet({
       itemList: ['相册', '拍摄'],
       success: (res) => {
@@ -108,6 +120,48 @@ Page({
       }
     })
   },
+
+  // 首屏授权：读取本地跳过标记并决定是否显示覆盖层
+  _initAuthOverlay() {
+    let bypass = false
+    try {
+      bypass = !!wx.getStorageSync('auth_bypassed')
+    } catch (e) {}
+    const hasAuth = !!this.data.profile?.hasAuth
+    this.setData({
+      authBypassed: bypass,
+      showAuthOverlay: !hasAuth && !bypass
+    })
+  },
+
+  // 覆盖层按钮：一键登录（统一授权弹窗 + 授权 + HTTP登录）
+  onAuthAgree() {
+    const { authorizeLogin } = require('../../utils/auth.js');
+    authorizeLogin()
+      .then(({ mergedUser }) => {
+        this.setData({
+          profile: { ...this.data.profile, ...mergedUser, hasAuth: true },
+          showAuthOverlay: false,
+          authBypassed: false
+        });
+        wx.showToast({ title: '登录成功', icon: 'success' });
+      })
+      .catch((err) => {
+        if (String(err && err.message).includes('USER_CANCEL_EXPLAIN')) {
+          wx.showToast({ title: '已取消授权说明', icon: 'none' });
+        } else {
+          wx.showToast({ title: '登录失败，请稍后重试', icon: 'none' });
+        }
+      });
+  },
+
+  // 覆盖层按钮：暂不授权，先逛逛
+  onAuthSkip() {
+    try { wx.setStorageSync('auth_bypassed', true) } catch (e) {}
+    this.setData({ authBypassed: true, showAuthOverlay: false })
+  },
+
+
 
   onDescInput(e) {
     this.setData({ expectDesc: e.detail.value })
@@ -223,14 +277,58 @@ Page({
   },
 
   onAnalyze() {
-    wx.showToast({
-      title: '原型：开始分析',
-      icon: 'none'
-    })
+    // 未登录：仅允许免费生成一次，其后需登录
+    if (!this.data.profile.hasAuth) {
+      let used = this.data.freeAnalyzeUsed
+      try {
+        if (!used) used = !!wx.getStorageSync('free_analyze_used')
+      } catch (e) {}
+      if (used) {
+        wx.showToast({ title: '请登录后继续使用此功能', icon: 'none' })
+        this.setData({ showAuthOverlay: true })
+        return
+      } else {
+        // 标记已使用免费次数
+        try { wx.setStorageSync('free_analyze_used', true) } catch (e) {}
+        this.setData({ freeAnalyzeUsed: true })
+      }
+    }
+
+    // 提交分析任务占位：保存用户意图与候选输入，等待后端/工作流产出结果
+    const prompt = (this.data.expectDesc || '').trim()
+    const list = this.normalize(this.data.previewPaths)
+    const inputs = list.map(it => it.src).filter(Boolean)
+    if (!prompt && !inputs.length) {
+      wx.showToast({ title: '请先填写描述或选择图片', icon: 'none' })
+      return
+    }
+    try {
+      const job = {
+        prompt,
+        inputs,
+        createdAt: Date.now(),
+        status: 'pending'
+      }
+      wx.setStorageSync('analyze_job', job)
+      // 清空旧的工作流结果，待工作流写入新结果
+      wx.removeStorageSync('workflow_results')
+    } catch (e) {}
+    wx.navigateTo({ url: '/pages/analyze/index' })
   },
 
   // 生命周期：进入页面初始化个人中心数据
   onLoad() {
+    // 同步首页主题背景
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
+      this.applyThemeColor(bg);
+    } catch (e) {}
+    // 读取个人中心开关：tips_enabled 控制首页两个区块显示
+    try {
+      const tipsEn = wx.getStorageSync('tips_enabled');
+      if (typeof tipsEn === 'boolean') this.setData({ homeTipsEnabled: tipsEn });
+    } catch (e) {}
     // 读取本地设置
     try {
       const saved = wx.getStorageSync('app_settings')
@@ -238,10 +336,30 @@ Page({
         this.setData({ settings: { ...this.data.settings, ...saved } })
       }
     } catch (e) {}
+    // 初始化一次免费生成标记
+    try {
+      const used = !!wx.getStorageSync('free_analyze_used')
+      if (used) this.setData({ freeAnalyzeUsed: true })
+    } catch (e) {}
+    // 初始化授权覆盖层状态
+    this._initAuthOverlay()
     // 刷新统计
     this.updateStatsFromLocal()
   },
   onShow() {
+    // 同步主题背景
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
+      this.applyThemeColor(bg);
+    } catch (e) {}
+    // 同步个人中心开关
+    try {
+      const tipsEn = wx.getStorageSync('tips_enabled');
+      if (typeof tipsEn === 'boolean' && tipsEn !== this.data.homeTipsEnabled) {
+        this.setData({ homeTipsEnabled: tipsEn });
+      }
+    } catch (e) {}
     // 页面可见时刷新统计，确保与相册操作保持同步
     this.updateStatsFromLocal()
   },
@@ -280,12 +398,17 @@ Page({
         desc: '用于完善个人资料与头像展示',
         success: (res) => {
           const { userInfo } = res || {}
+          const next = {
+            avatarUrl: userInfo?.avatarUrl || '',
+            nickName: userInfo?.nickName || '微信昵称',
+            hasAuth: true
+          }
+          // 持久化到本地，供个人中心自动读取
+          try { wx.setStorageSync('profile_basic', next); } catch (e) {}
           this.setData({
-            profile: {
-              avatarUrl: userInfo?.avatarUrl || '',
-              nickName: userInfo?.nickName || '已登录',
-              hasAuth: true
-            }
+            profile: next,
+            showAuthOverlay: false,
+            authBypassed: false
           })
           wx.showToast({ title: '登录成功', icon: 'success' })
         },
@@ -302,6 +425,12 @@ Page({
   onNavigate(e) {
     const url = e.currentTarget.dataset.url
     if (!url) return
+    // 未登录：个人中心常用功能需登录
+    if (!this.data.profile.hasAuth) {
+      wx.showToast({ title: '请登录后使用此功能', icon: 'none' })
+      this.setData({ showAuthOverlay: true })
+      return
+    }
     // 若目标是当前页可用 switchTab，否则 navigateTo
     if (/^\/pages\/(index)\/index/.test(url)) {
       wx.switchTab({ url })
@@ -373,6 +502,54 @@ Page({
     this.onRefreshTips()
     this.updateStatsFromLocal()
     wx.stopPullDownRefresh()
+  },
+
+  // 应用主题背景到导航栏、页面与底部tabBar
+  applyThemeColor(backgroundColor) {
+    const frontColor = this.getContrastingText(backgroundColor);
+    try {
+      wx.setNavigationBarColor({
+        frontColor,
+        backgroundColor,
+        animation: { duration: 200, timingFunc: 'easeIn' }
+      });
+    } catch (e) {}
+    // 同步 tabBar 背景
+    try {
+      wx.setTabBarStyle({
+        backgroundColor,
+        borderStyle: frontColor === '#ffffff' ? 'white' : 'black',
+        color: frontColor === '#ffffff' ? '#e6e6e6' : '#666666',
+        selectedColor: '#07C160'
+      });
+    } catch (e) {}
+    try {
+      wx.setBackgroundColor({
+        backgroundColor,
+        backgroundColorTop: backgroundColor,
+        backgroundColorBottom: backgroundColor
+      });
+    } catch (e) {}
+  },
+
+  // 根据背景色自动选择黑/白前景色
+  getContrastingText(hex) {
+    const norm = (h) => {
+      if (!h) return '#000000';
+      let s = h.toString().trim();
+      if (s[0] !== '#') s = '#' + s;
+      if (s.length === 4) {
+        const r = s[1], g = s[2], b = s[3];
+        s = '#' + r + r + g + g + b + b;
+      }
+      return s.slice(0, 7);
+    };
+    const c = norm(hex);
+    const r = parseInt(c.substr(1, 2), 16);
+    const g = parseInt(c.substr(3, 2), 16);
+    const b = parseInt(c.substr(5, 2), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 160 ? '#000000' : '#ffffff';
   },
 
   // 分享

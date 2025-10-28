@@ -8,13 +8,7 @@ App({
       //   如不填则使用默认环境（第一个创建的环境）
       env: ""
     };
-    if (!wx.cloud) {
-      console.error("请使用 2.2.3 或以上的基础库以使用云能力");
-    } else {
-      wx.cloud.init({
-        env: this.globalData.env,
-        traceUser: true,
-      });
-    }
+    // 云开发已停用：不再初始化 wx.cloud，保留全局配置占位
+    this.globalData.env = this.globalData.env;
   },
 });

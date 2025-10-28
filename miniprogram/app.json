@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/analyze/index",
     "pages/photos/index",
     "pages/profile/index",
     "pages/example/index"

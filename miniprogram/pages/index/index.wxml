@@ -1,5 +1,5 @@
 <!-- AI 拍照姿势建议 - 原型首页（柔和淡色系） -->
-<view class="home">
+<view class="home" style="background: {{themeBg}};">
   <!-- 欢迎文案（单行、稍加粗） -->
   <view class="welcome single">
     欢迎使用AI拍照助手！
@@ -51,22 +51,33 @@
   <button class="analyze-btn" bindtap="onAnalyze">开始分析</button>
 
   <!-- 热门姿势关键词（少女风粉色标签） -->
-  <view class="section-title">
+  <view class="section-title" wx:if="{{homeTipsEnabled}}">
     <text>热门姿势关键词</text>
     <view class="refresh-btn" bindtap="onRefreshChips">换一批</view>
   </view>
-  <view class="chip-wrap">
+  <view class="chip-wrap" wx:if="{{homeTipsEnabled}}">
     <text class="chip" wx:for="{{hotChips}}" wx:key="*this" data-word="{{item}}" bindtap="onTapChip">{{item}}</text>
   </view>
 
   <!-- 拍照小贴士（柔和卡片） -->
-  <view class="section-title">
+  <view class="section-title" wx:if="{{homeTipsEnabled}}">
     <text>姿势句子灵感</text>
     <view class="refresh-btn" bindtap="onRefreshTips">换一批</view>
   </view>
-  <view class="tips">
+  <view class="tips" wx:if="{{homeTipsEnabled}}">
     <view class="tips-item" wx:for="{{tipsItems}}" wx:key="*this">{{item}}</view>
   </view>
 
   <!-- 选中预览（已由中间预览框替代） -->
+
+  <!-- 首屏授权覆盖层：仅在未授权且未跳过时显示 -->
+  <view wx:if="{{showAuthOverlay}}" class="auth-overlay">
+    <view class="auth-card">
+      <view class="auth-title">需要你的授权</view>
+      <view class="auth-sub">登录后可保存头像昵称，并顺畅使用上传与分析功能</view>
+      <button class="btn primary" bindtap="onAuthAgree">一键登录</button>
+
+      <button class="btn ghost" bindtap="onAuthSkip">暂不授权，先逛逛</button>
+    </view>
+  </view>
 </view>

@@ -6,6 +6,7 @@ page { background: #FFF7FA; }
   align-items: center;
 }
 
+
 /* 标题与分区 */
 .section-title{
   width:92%;
@@ -17,6 +18,7 @@ page { background: #FFF7FA; }
   margin-top: 8rpx;
   margin-bottom: 8rpx;
 }
+
 .section-title.small{ font-size:26rpx; margin-top: 20rpx; }
 
 /* 档案卡片 */
@@ -33,6 +35,7 @@ page { background: #FFF7FA; }
   justify-content:space-between;
   box-sizing:border-box;
 }
+
 .profile-left{
   display:flex;
   align-items:center;
@@ -48,6 +51,7 @@ page { background: #FFF7FA; }
 .profile-info .nickname{
   font-size:28rpx; color:#7A3F60; font-weight:600;
 }
+
 .nickname-row{
   display:flex; align-items:center; gap:10rpx;
 }
@@ -60,9 +64,11 @@ page { background: #FFF7FA; }
   font-size:20rpx;
   line-height: 24rpx;
 }
+
 .profile-info .auth-tip{
   font-size:22rpx; color:#B07497; margin-top:6rpx;
 }
+
 .progress{
   margin-top:10rpx;
   width: 300rpx;
@@ -72,6 +78,8 @@ page { background: #FFF7FA; }
   border:2rpx solid #F7C8D9;
   overflow:hidden;
 }
+
+
 .progress-bar{
   height:100%;
   background: linear-gradient(90deg,#F78FB3,#F5A6C1);
@@ -90,21 +98,25 @@ page { background: #FFF7FA; }
   justify-content:space-between;
   margin-top:16rpx;
 }
+
 .stat-item{
   flex:1;
   padding:20rpx 10rpx;
   text-align:center;
   color:#8C5676;
 }
+
 .stat-item + .stat-item{
   border-left:2rpx solid #F4D9E1;
 }
 .stat-num{
   font-size:34rpx; color:#A8476B; font-weight:700;
 }
+
 .stat-label{
   margin-top:6rpx; font-size:22rpx; color:#B07497;
 }
+
 
 /* 设置卡片 */
 .settings-card{
@@ -115,6 +127,7 @@ page { background: #FFF7FA; }
   box-shadow:0 6rpx 14rpx rgba(248,143,179,0.06);
   margin-top:16rpx;
 }
+
 .setting-row{
   display:flex; align-items:center; justify-content:space-between;
   padding:20rpx;
@@ -124,6 +137,28 @@ page { background: #FFF7FA; }
 .setting-texts{ display:flex; flex-direction:column; gap:6rpx; }
 .setting-title{ color:#7A3F60; font-size:26rpx; font-weight:600; }
 .setting-sub{ color:#B07497; font-size:22rpx; }
+
+
+
+/* 小技巧卡片 */
+.tips-card{
+  width:92%;
+  background:#FFFFFF;
+  border-radius:18rpx;
+  border:2rpx solid #F4D9E1;
+  box-shadow:0 6rpx 14rpx rgba(248,143,179,0.06);
+  padding: 16rpx 20rpx;
+  box-sizing: border-box;
+  margin-top: 12rpx;
+}
+.tip-item{
+  font-size:24rpx;
+  color:#7A3F60;
+  line-height: 1.8;
+}
+.tip-item + .tip-item{
+  margin-top: 6rpx;
+}
 
 /* 功能列表 */
 .action-list{
@@ -135,12 +170,14 @@ page { background: #FFF7FA; }
   margin-top:16rpx;
   overflow:hidden;
 }
+
 .action-item{
   display:flex; align-items:center; justify-content:space-between;
   padding:22rpx 20rpx;
   color:#7A3F60;
   border-bottom:2rpx solid #F4D9E1;
 }
+
 .action-item:last-child{ border-bottom:0; }
 .action-left{
   display:flex; align-items:center; gap:14rpx;
@@ -153,6 +190,33 @@ page { background: #FFF7FA; }
 }
 .action-text{ font-size:26rpx; }
 .action-arrow{ color:#B07497; font-size:36rpx; line-height:1; }
+
+
+/* 调色盘 */
+.color-palette{
+  width:92%;
+  display:flex;
+  flex-wrap:wrap;
+  gap:14rpx;
+  padding: 10rpx 20rpx 0;
+  box-sizing: border-box;
+}
+.color-swatch{
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid rgba(0,0,0,0.06);
+  box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.06);
+}
+.color-swatch.selected{
+  outline: 4rpx solid rgba(0,0,0,0.15);
+  border-color: rgba(0,0,0,0.2);
+}
+.color-preview{
+  width: 56rpx; height: 32rpx; border-radius: 8rpx;
+  border:2rpx solid rgba(0,0,0,0.06);
+  box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.06);
+}
 
 /* 操作按钮 */
 .ops-row{
@@ -171,6 +235,7 @@ page { background: #FFF7FA; }
 }
 .btn.primary{ background:#F78FB3; color:#fff; }
 .btn.ghost{ background:#FFE7EE; color:#A8476B; border:2rpx solid #F7C8D9; }
+
 .btn-mini.primary{
   background:#F78FB3; color:#fff; border-radius:999rpx;
   padding: 0 24rpx; height:60rpx; line-height:60rpx;
