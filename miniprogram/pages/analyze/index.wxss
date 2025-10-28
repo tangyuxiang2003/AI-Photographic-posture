@@ -1,5 +1,7 @@
 page { background: #FFF7FA; }
 .analyze-wrap { padding: 24rpx; color: #7A3F60; font-size: 28rpx; }
+
+/* 进度卡片（保留你的星空风格） */
 .progress-wrap {
   position: relative;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -8,7 +10,6 @@ page { background: #FFF7FA; }
   overflow: hidden;
   background: transparent;
 }
-.progress-img { width: 360rpx; opacity: 0.9; z-index: 2; }
 .progress-text { color:#EDEAFF; font-size:30rpx; z-index:3; text-shadow: 0 0 8rpx rgba(198,190,255,.6), 0 0 16rpx rgba(198,190,255,.35); }
 .progress-subtext { color:#CFCBFF; font-size:24rpx; opacity:.9; z-index:3; margin-top:-8rpx; text-shadow: 0 0 6rpx rgba(198,190,255,.45); }
 
@@ -16,8 +17,8 @@ page { background: #FFF7FA; }
 .star-square {
   position: relative;
   width: 600rpx;
-  height: 480rpx; /* 1:0.8 高宽比 */
-  margin: 24rpx auto 0; /* 向下移动一点 */
+  height: 480rpx;
+  margin: 24rpx auto 0;
   border-radius: 24rpx;
   overflow: hidden;
   background: linear-gradient(160deg, #0b1026 0%, #2b1b55 100%);
@@ -45,32 +46,19 @@ page { background: #FFF7FA; }
     radial-gradient(1.5px 1.5px at 90% 50%, rgba(255,255,255,0.9), rgba(255,255,255,0) 60%);
   background-repeat:no-repeat;
 }
-
 @keyframes twinkle { 0%,100% { filter: brightness(0.9); } 50% { filter: brightness(1.3); } }
 @keyframes drift { 0% { transform: translateY(0px); } 100% { transform: translateY(-10px); } }
-.result-wrap {
-  position: relative;
-  background:#fff;
-  border-radius: 20rpx;
-  overflow: hidden;
-  border: 2rpx solid #F4D9E1;
-  box-shadow: 0 10rpx 24rpx rgba(248,143,179,0.18);
-  max-width: 680rpx;
-  margin: 40rpx auto;
-}
-.result-img { width: 100%; display: block; }
-.fade-in { animation: fadeIn 360ms ease-out both; }
-@keyframes fadeIn { from { opacity:0; transform: translateY(8rpx);} to { opacity:1; transform: translateY(0);} }
-.star-btn {
-  position: absolute; top: 16rpx; right: 16rpx;
-  width: 64rpx; height: 64rpx; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.92); color: #C0C0C0; font-size: 36rpx;
-  border: 2rpx solid #F4D9E1;
-  box-shadow: 0 6rpx 12rpx rgba(0,0,0,0.08);
-}
-.star-btn.active { color: #FFD21E; }
+
+/* 结果网格 */
+.grid { display:flex; flex-wrap:wrap; gap: 16rpx; padding: 8rpx; }
+.grid-item { width: calc((100% - 32rpx) / 3); height: 220rpx; border-radius: 16rpx; background:#eee; }
+
+/* 失败提示 */
 .empty {
   margin-top: 40rpx; background:#fff; border-radius:16rpx; padding: 40rpx; text-align:center; color:#8C5676;
   border: 2rpx solid #F4D9E1;
 }
+
+/* 动画 */
+.fade-in { animation: fadeIn 360ms ease-out both; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(8rpx);} to { opacity:1; transform: translateY(0);} }

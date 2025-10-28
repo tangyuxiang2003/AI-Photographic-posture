@@ -1,21 +1,22 @@
 <view class="analyze-wrap">
-  <!-- 生成中：单图居中 + 百分比 -->
-  <view wx:if="{{generating}}" class="progress-wrap">
+  <!-- 生成中：仅显示进度卡片 -->
+  <view wx:if="{{!done && !failed}}" class="progress-wrap">
     <view class="star-square">
-    <view class="stars stars-1"></view>
-    <view class="stars stars-2"></view>
+      <view class="stars stars-1"></view>
+      <view class="stars stars-2"></view>
 
-    <view class="progress-text">生成中 {{progress}}%</view>
-    <view class="progress-subtext">你的专属姿势即将完成！</view>
+      <view class="progress-text">生成中 {{progress}}%</view>
+      <view class="progress-subtext">你的专属姿势即将完成！</view>
     </view>
   </view>
 
-  <!-- 结果：直接展示第一张生成图，点击可收藏/取消 -->
-  <view wx:elif="{{images.length}}" class="result-wrap">
-    <image class="result-img fade-in" src="{{images[0].src}}" mode="widthFix"></image>
-    <view class="star-btn {{favSet[images[0].src] ? 'active' : ''}}" data-src="{{images[0].src}}" bindtap="onToggleFav">★</view>
+  <!-- 完成：一次性展示所有返回图片 -->
+  <view wx:if="{{done}}" class="grid">
+    <block wx:for="{{images}}" wx:key="*this">
+      <image class="grid-item fade-in" mode="aspectFill" src="{{item}}" bindtap="onPreview" data-url="{{item}}" />
+    </block>
   </view>
 
-  <!-- 空态 -->
-  <view wx:else class="empty">暂无结果</view>
+  <!-- 失败兜底 -->
+  <view wx:if="{{failed}}" class="empty">生成失败，请重试</view>
 </view>

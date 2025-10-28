@@ -51,12 +51,12 @@ Page({
     // 功能角标与图标映射（如无匹配图标将回退到问号）
     actionBadges: {},
     actionIconMap: {
-      favorites: '/miniprogram/images/icons/goods.png',
-      history: '/miniprogram/images/icons/examples.png',
-      account: '/miniprogram/images/icons/usercenter.png',
-      settings: '/miniprogram/images/icons/setting.svg',
-      feedback: '/miniprogram/images/icons/customer-service.svg',
-      about: '/miniprogram/images/icons/question.svg'
+      favorites: '/images/icons/goods.png',
+      history: '/images/icons/examples.png',
+      account: '/images/icons/usercenter.png',
+      settings: '/images/icons/setting.svg',
+      feedback: '/images/icons/customer-service.svg',
+      about: '/images/icons/question.svg'
     },
     showAuthOverlay: false,
     authBypassed: false,
@@ -138,7 +138,15 @@ Page({
   onAuthAgree() {
     const { authorizeLogin } = require('../../utils/auth.js');
     authorizeLogin()
-      .then(({ mergedUser }) => {
+      .then(({ mergedUser, token }) => {
+        console.log('登录成功，后端返回的 token:', token);
+        // 保存 token，供请求自动注入 Authorization 使用
+        if (typeof token === 'string' && token) {
+          try { wx.setStorageSync('token', token); } catch (e) {}
+          try { wx.setStorageSync('auth_token', token); } catch (e) {}
+          // 使用封装的 setToken，统一注入到 utils/request.js
+          try { require('../../utils/request.js').setToken(token); } catch (e) {}
+        }
         this.setData({
           profile: { ...this.data.profile, ...mergedUser, hasAuth: true },
           showAuthOverlay: false,
@@ -313,7 +321,35 @@ Page({
       // 清空旧的工作流结果，待工作流写入新结果
       wx.removeStorageSync('workflow_results')
     } catch (e) {}
-    wx.navigateTo({ url: '/pages/analyze/index' })
+    // 导航前先读取 token，若为空则兜底提示并不跳转
+    let t1 = '', t2 = '', tk = '';
+    try { t1 = wx.getStorageSync('auth_token') || ''; } catch (e) {}
+    try { t2 = wx.getStorageSync('token') || ''; } catch (e) {}
+    tk = t1 || t2;
+    try { console.log('[index] pre-navigate token', { auth_token: t1, token: t2, using: tk }); } catch (_) {}
+    if (!tk) {
+      wx.showToast({ title: '登录信息未就绪，请稍后重试', icon: 'none' });
+      // 如果未显示授权层，则引导用户登录
+      if (!this.data.profile.hasAuth) this.setData({ showAuthOverlay: true });
+      return;
+    }
+    wx.navigateTo({
+      url: '/pages/analyze/index',
+      success: (res) => {
+        const channel = res && res.eventChannel;
+        if (channel) {
+          try { console.log('[index] emit token', { auth_token: t1, token: t2, using: tk }); } catch (_) {}
+          channel.emit('startAnalyzePayload', {
+            localPaths: inputs,
+            desc: prompt,
+            // 可选：如果有用户ID就传，没有则留空字符串
+            userId: (this.data.profile && this.data.profile.userId) ? String(this.data.profile.userId) : '',
+            // 附带 token，分析页兜底使用
+            token: tk
+          });
+        }
+      }
+    })
   },
 
   // 生命周期：进入页面初始化个人中心数据

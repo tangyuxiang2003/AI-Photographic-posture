@@ -182,6 +182,8 @@ async function authorizeLogin(externalUserInfo) {
   let resp;
   try {
     resp = await requestLogin({ loginCode, userInfoCode, userInfo });
+
+    console.log(111111, resp)
   } catch (e) {
     // 403 时刷新 code 重试一次
     const msg = String((e && e.message) || e || '');
@@ -198,7 +200,9 @@ async function authorizeLogin(externalUserInfo) {
     }
   }
   const mergedUser = persistAndSync(resp.user, userInfo);
-  try { if (resp.token) wx.setStorageSync('auth_token', resp.token); } catch (e) {}
+  try { if (resp.data.token) 
+    console.log(2222222222, resp.data.token)
+    wx.setStorageSync('auth_token', resp.data.token); } catch (e) {}
   return { mergedUser, token: resp.token || '' };
 }
 
