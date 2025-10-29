@@ -313,30 +313,17 @@ Page({
     });
   },
   runCallContainer: async function () {
-    const app = getApp();
-    const base = app?.globalData?.apiBase || "";
-    if (base) {
-      wx.request({
-        url: `${base}/api/users`,
-        method: "GET",
-        success: (r) => {
-          const items = r?.data?.items || r?.data || [];
-          this.setData({
-            haveGetCallContainerRes: true,
-            callContainerResStr: `${JSON.stringify(items, null, 2)}`,
-          });
-        },
-        fail: () => {
-          // 请求失败则回退本地模拟
-          const items = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
-          this.setData({
-            haveGetCallContainerRes: true,
-            callContainerResStr: `${JSON.stringify(items, null, 2)}`,
-          });
-        },
+    // 使用统一封装，自动携带 token 与 userId
+    const { request } = require('../../utils/request');
+    try {
+      const r = await request({ url: '/api/users', method: 'GET' });
+      const items = r?.data?.items || r?.data || [];
+      this.setData({
+        haveGetCallContainerRes: true,
+        callContainerResStr: `${JSON.stringify(items, null, 2)}`,
       });
-    } else {
-      // 未配置后端时本地模拟数据
+    } catch (_) {
+      // 请求失败则回退本地模拟
       const items = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
       this.setData({
         haveGetCallContainerRes: true,

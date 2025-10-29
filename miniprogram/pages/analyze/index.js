@@ -81,7 +81,8 @@ Page({
 
   // 单文件上传分析
   startAnalyze(localFilePath, desc, userId) {
-    if (!getAuthHeader().Authorization) {
+    const { hasToken } = require('../../utils/storage');
+    if (!hasToken()) {
       wx.showToast({ title: '请先登录获取Token', icon: 'none' });
       return;
     }
@@ -89,46 +90,45 @@ Page({
     this._resetStatus();
     this._startFakeProgress();
 
+    // 统一从 storage 获取 userId，若函数参数传入则作为兜底
+    const { getAuth } = require('../../utils/storage');
+    const auth = (getAuth && getAuth()) || {};
+    const uidStore = normalizeUserId(auth.userId);
+    const uidParam = normalizeUserId(userId);
+    const uid = uidStore !== undefined ? uidStore : uidParam;
+
     const hdr1 = getAuthHeader();
-    const uid = normalizeUserId(userId);
     const form = { content: desc || '' };
     if (uid !== undefined) form.userId = uid;
     try { console.log('[analyze] sending userId(single)', uid, 'form.userId=', form.userId); } catch (_) {}
     try { console.log('[analyze] startAnalyze headers', hdr1, { userId: uid, content: desc || '' }); } catch (e) {}
-    wx.uploadFile({
-      url: `${BASE_URL}/api/image/upload`,
+    const { upload } = require('../../utils/request');
+    upload({
+      url: '/api/image/upload',
       filePath: localFilePath,
       name: 'file',
-      header: {
-        ...hdr1,
-        // Content-Type 由 uploadFile 自动处理为 multipart/form-data
-      },
-      formData: form,
-      success: (res) => {
-        try {
-          // 处理 401/403
-          if (res.statusCode === 401 || res.statusCode === 403) {
-            throw new Error('未授权或登录过期');
-          }
-          try { console.log('[analyze] upload resp(single)', res.statusCode, res.data); } catch (e2) {}
-          const body = JSON.parse(res.data || '{}');
-          if (body.code !== 0) throw new Error(body.msg || '服务错误');
-          const images = (Array.isArray(body.data) ? body.data : []).map(i => i.imageUrl).filter(Boolean);
-          try { console.log('[analyze] images(single)', images); } catch (e3) {}
-          this.setData({ images, done: true, progress: 100 });
-        } catch (e) {
-          try { console.error('[analyze] fail(single)', e); } catch (e4) {}
-          this._failout(e && e.message);
-        }
-      },
-      fail: () => this._failout(),
-      complete: () => this._stopFakeProgress()
-    });
+      formData: form
+    }).then((res) => {
+      try {
+        if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
+        try { console.log('[analyze] upload resp(single)', res.statusCode, res.data); } catch (e2) {}
+        const body = JSON.parse(res.data || '{}');
+        if (body.code !== 0) throw new Error(body.msg || '服务错误');
+        const images = (Array.isArray(body.data) ? body.data : []).map(i => i.imageUrl).filter(Boolean);
+        try { console.log('[analyze] images(single)', images); } catch (e3) {}
+        this.setData({ images, done: true, progress: 100 });
+      } catch (e) {
+        try { console.error('[analyze] fail(single)', e); } catch (e4) {}
+        this._failout(e && e.message);
+      }
+    }).catch(() => this._failout())
+      .finally(() => this._stopFakeProgress());
   },
 
   // 多文件：全部上传完后一次性合并展示
   async startAnalyzeMulti(localPaths = [], desc, userId) {
-    if (!getAuthHeader().Authorization) {
+    const { hasToken } = require('../../utils/storage');
+    if (!hasToken()) {
       wx.showToast({ title: '请先登录获取Token', icon: 'none' });
       return;
     }
@@ -139,32 +139,35 @@ Page({
     try {
       const tasks = localPaths.map(fp => new Promise((resolve, reject) => {
         const hdr2 = getAuthHeader();
-        const uid = normalizeUserId(userId);
+
+        // 统一从 storage 获取 userId，若函数参数传入则作为兜底
+        const { getAuth } = require('../../utils/storage');
+        const auth = (getAuth && getAuth()) || {};
+        const uidStore = normalizeUserId(auth.userId);
+        const uidParam = normalizeUserId(userId);
+        const uid = uidStore !== undefined ? uidStore : uidParam;
+
         const form = { content: desc || '' };
         if (uid !== undefined) form.userId = uid;
         try { console.log('[analyze] sending userId(multi)', uid, 'form.userId=', form.userId); } catch (_) {}
         try { console.log('[analyze] startAnalyzeMulti headers', hdr2, { userId: uid, content: desc || '' }); } catch (e0) {}
-        wx.uploadFile({
-          url: `${BASE_URL}/api/image/upload`,
+        const { upload } = require('../../utils/request');
+        upload({
+          url: '/api/image/upload',
           filePath: fp,
           name: 'file',
-          header: {
-            ...hdr2
-          },
-          formData: form,
-          success: (res) => {
-            try {
-              if (res.statusCode === 401 || res.statusCode === 403) return reject(new Error('未授权或登录过期'));
-              try { console.log('[analyze] upload resp(multi item)', res.statusCode, res.data); } catch (e2) {}
-              const body = JSON.parse(res.data || '{}');
-              if (body.code !== 0) return reject(new Error(body.msg || '服务错误'));
-              const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.imageUrl).filter(Boolean);
-              try { console.log('[analyze] images(multi item)', arr); } catch (e3) {}
-              resolve(arr);
-            } catch (e) { try { console.error('[analyze] fail(multi item)', e); } catch (e4) {} reject(e); }
-          },
-          fail: reject
-        });
+          formData: form
+        }).then((res) => {
+          try {
+            if (res.statusCode === 401 || res.statusCode === 403) return reject(new Error('未授权或登录过期'));
+            try { console.log('[analyze] upload resp(multi item)', res.statusCode, res.data); } catch (e2) {}
+            const body = JSON.parse(res.data || '{}');
+            if (body.code !== 0) return reject(new Error(body.msg || '服务错误'));
+            const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.imageUrl).filter(Boolean);
+            try { console.log('[analyze] images(multi item)', arr); } catch (e3) {}
+            resolve(arr);
+          } catch (e) { try { console.error('[analyze] fail(multi item)', e); } catch (e4) {} reject(e); }
+        }).catch(reject);
       }));
 
       const results = await Promise.all(tasks);

@@ -140,15 +140,22 @@ function getUserInfoWithConfirm(desc = '用于完善个人资料') {
   });
 }
 
+const { saveAuth } = require('./storage');
+
 function persistAndSync(dataUser, fallbackUser) {
   const mergedUser = {
     nickName: (dataUser && dataUser.nickName) || (fallbackUser && fallbackUser.nickName) || '微信昵称',
     avatarUrl: (dataUser && dataUser.avatarUrl) || (fallbackUser && fallbackUser.avatarUrl) || ''
   };
-  try { wx.setStorageSync('auth_token', (dataUser && dataUser.token) || ''); } catch (e) {}
+  // 兼容旧键，同时写入统一的 authData
+  const t = (dataUser && dataUser.token) || '';
+  try { if (t) { wx.setStorageSync('auth_token', t); wx.setStorageSync('token', t); } } catch (e) {}
   try { wx.setStorageSync('profile_basic', { ...mergedUser, hasAuth: true }); } catch (e) {}
   const app = getApp && getApp();
   if (app && app.globalData) app.globalData.userInfo = { ...mergedUser, hasAuth: true };
+  // 尝试写入 userId（若后端返回）
+  const uid = (dataUser && (dataUser.id || dataUser.userId)) || undefined;
+  try { saveAuth({ token: t, userId: uid }); } catch (e) {}
   return mergedUser;
 }
 
@@ -200,10 +207,25 @@ async function authorizeLogin(externalUserInfo) {
     }
   }
   const mergedUser = persistAndSync(resp.user, userInfo);
-  try { if (resp.data.token) 
-    console.log(2222222222, resp.data.token)
-    wx.setStorageSync('auth_token', resp.data.token); } catch (e) {}
-  return { mergedUser, token: resp.token || '' };
+  // 统一抽取 token 与 userId 并保存
+  try {
+    const tokenFrom =
+      (resp && resp.data && resp.data.token) ||
+      (resp && resp.user && resp.user.token) ||
+      resp.token || '';
+    const userIdFrom =
+      (resp && resp.user && (resp.user.id || resp.user.userId)) ||
+      (resp && resp.data && resp.data.userId) ||
+      resp.userId || undefined;
+    if (tokenFrom) {
+      wx.setStorageSync('auth_token', tokenFrom);
+      wx.setStorageSync('token', tokenFrom);
+    }
+    if (tokenFrom || userIdFrom) {
+      try { saveAuth({ token: tokenFrom, userId: userIdFrom }); } catch (e) {}
+    }
+  } catch (e) {}
+  return { mergedUser, token: (resp && (resp.token || (resp.data && resp.data.token))) || '' };
 }
 
 module.exports = { authorizeLogin };

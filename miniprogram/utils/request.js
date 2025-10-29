@@ -1,8 +1,14 @@
 
-// miniprogram/utils/request.js
-// 统一封装 wx.request，自动注入 Authorization: Bearer token，并处理 401
+/**
+ * miniprogram/utils/request.js
+ * 统一封装：
+ * - 自动注入 Authorization: Bearer token
+ * - 自动随请求传递 userId（GET/DELETE: query；其他方法与上传: body/formData）
+ * - 处理 401
+ */
+const { getAuth, saveAuth } = require('./storage');
 
-const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://172.20.10.2:8080
+const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://你的域名
 
 /**
  * 统一请求封装
@@ -14,18 +20,40 @@ const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://
  * @returns {Promise<WechatMiniprogram.RequestSuccessCallbackResult>}
  */
 function request({ url, method = 'GET', data = {}, headers = {} }) {
-  const token = wx.getStorageSync('token');
+  const auth = getAuth() || {};
+  const token = auth.token || '';
+  const userId = auth.userId;
+
   const finalHeaders = {
     'Content-Type': 'application/json',
     Authorization: token ? `Bearer ${token}` : '',
     ...headers,
   };
 
+  // 将 userId 注入到请求
+  const m = String(method || 'GET').toUpperCase();
+  let finalUrl = url;
+  let finalData = data || {};
+  if (m === 'GET' || m === 'DELETE') {
+    // 拼到 query
+    const query = new URLSearchParams(
+      Object.entries({ ...finalData, userId }).reduce((acc, [k, v]) => {
+        if (v !== undefined && v !== null && String(v) !== '') acc[k] = String(v);
+        return acc;
+      }, {})
+    ).toString();
+    finalUrl = query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url;
+    finalData = undefined;
+  } else {
+    // 放到 body
+    finalData = { userId, ...finalData };
+  }
+
   return new Promise((resolve, reject) => {
     wx.request({
-      url: BASE_URL + url,
-      method,
-      data,
+      url: (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) ? finalUrl : (BASE_URL + finalUrl),
+      method: m,
+      data: finalData,
       header: finalHeaders,
       success: (res) => {
         // 统一处理 401（token 过期/无效）
@@ -42,19 +70,19 @@ function request({ url, method = 'GET', data = {}, headers = {} }) {
         // 成功时自动保存后端返回的 token（响应头或响应体）
         try {
           const headerAuth = (res.header && (res.header.Authorization || res.header.authorization)) || '';
+          let newToken = '';
           if (headerAuth && headerAuth.startsWith('Bearer ')) {
-            const newToken = headerAuth.slice(7);
-            if (newToken) setToken(newToken);
+            newToken = headerAuth.slice(7);
           } else if (res.data) {
             // res.data 可能是字符串
             let body = res.data;
             if (typeof body === 'string') {
               try { body = JSON.parse(body); } catch (e) {}
             }
-            const newToken = body && body.token;
-            if (typeof newToken === 'string' && newToken) {
-              setToken(newToken);
-            }
+            newToken = body && body.token || '';
+          }
+          if (typeof newToken === 'string' && newToken) {
+            setToken(newToken);
           }
         } catch (e) {}
 
@@ -92,18 +120,23 @@ function post(url, body = {}, headers = {}) {
  * @returns {Promise<WechatMiniprogram.UploadFileSuccessCallbackResult>}
  */
 function upload({ url, filePath, name = 'file', formData = {}, headers = {} }) {
-  const token = wx.getStorageSync('token');
+  const auth = getAuth() || {};
+  const token = auth.token || '';
+  const userId = auth.userId;
+
   const finalHeaders = {
     Authorization: token ? `Bearer ${token}` : '',
     ...headers,
   };
 
+  const finalForm = { userId, ...(formData || {}) };
+
   return new Promise((resolve, reject) => {
     wx.uploadFile({
-      url: BASE_URL + url,
+      url: (url.startsWith('http://') || url.startsWith('https://')) ? url : (BASE_URL + url),
       filePath,
       name,
-      formData,
+      formData: finalForm,
       header: finalHeaders,
       success: (res) => {
         // 统一处理 401（token 过期/无效）
@@ -147,7 +180,9 @@ function upload({ url, filePath, name = 'file', formData = {}, headers = {} }) {
  * @param {string} token
  */
 function setToken(token) {
-  wx.setStorageSync('token', token);
+  try { wx.setStorageSync('token', token); } catch (e) {}
+  try { wx.setStorageSync('auth_token', token); } catch (e) {}
+  try { saveAuth({ token }); } catch (e) {}
 }
 
 /**
