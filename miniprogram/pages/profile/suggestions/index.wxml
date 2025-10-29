@@ -1,0 +1,34 @@
+<view class="suggest-page">
+  <view class="section-title">
+    <text>写下你的建议与想法</text>
+  </view>
+
+  <view class="input-card">
+    <textarea class="suggest-input"
+              placeholder="欢迎提出你的建议、遇到的问题或想要新增的功能～"
+              maxlength="500"
+              auto-height
+              value="{{input}}"
+              bindinput="onInput"></textarea>
+    <view class="ops">
+      <button class="btn primary" size="mini" bindtap="onSubmit" disabled="{{!canSubmit}}">提交</button>
+    </view>
+  </view>
+
+  <view class="section-title small">
+    <text>我的历史建议</text>
+  </view>
+
+  <view class="list-card" wx:if="{{suggestions.length}}">
+    <block wx:for="{{suggestions}}" wx:key="id">
+      <view class="item">
+        <view class="meta">{{item.readableTime}}</view>
+        <view class="content">{{item.content}}</view>
+      </view>
+    </block>
+  </view>
+
+  <view class="empty" wx:if="{{!suggestions.length}}">
+    暂无建议，写下你的第一个想法吧～
+  </view>
+</view>

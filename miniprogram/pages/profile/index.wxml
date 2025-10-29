@@ -109,7 +109,7 @@
       <view class="action-right"><text class="action-arrow">›</text></view>
     </view>
     <!-- 3. 用户建议（原“给你一点儿建议”） -->
-    <view class="action-item">
+    <view class="action-item" bindtap="onTapSuggestions">
       <view class="action-left">
         <image class="action-icon" src="../../images/icons/customer-service.svg" mode="aspectFit"></image>
         <view class="action-text">用户建议</view>

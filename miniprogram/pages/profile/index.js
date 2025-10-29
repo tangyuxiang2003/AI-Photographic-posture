@@ -103,6 +103,11 @@ Page({
     wx.switchTab({ url: '/pages/photos/index' });
   },
 
+  // 常用功能：用户建议
+  onTapSuggestions() {
+    wx.navigateTo({ url: '/pages/profile/suggestions/index' });
+  },
+
   // 应用主题背景到导航栏、页面与底部tabBar
   applyThemeColor(backgroundColor) {
     const frontColor = this.getContrastingText(backgroundColor);
