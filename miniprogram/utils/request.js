@@ -10,6 +10,13 @@ const { getAuth, saveAuth } = require('./storage');
 
 const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://你的域名
 
+// 统一清理本地登录态（token/auth_token 以及持久化的 auth）
+function clearAuthTokens() {
+  try { wx.removeStorageSync('token'); } catch (e) {}
+  try { wx.removeStorageSync('auth_token'); } catch (e) {}
+  try { saveAuth({ token: '', userId: undefined }); } catch (e) {}
+}
+
 /**
  * 统一请求封装
  * @param {Object} options
@@ -61,12 +68,10 @@ function request({ url, method = 'GET', data = {}, headers = {}, timeout }) {
       timeout: timeoutScaled,
       success: (res) => {
         // 统一处理 401（token 过期/无效）
-        if (res.statusCode === 401) {
-          try {
-            wx.removeStorageSync('token');
-          } catch (e) {}
+        if (res.statusCode === 401 || res.statusCode === 403) {
+          clearAuthTokens();
           // 可在此触发登录重定向或事件通知
-          // wx.navigateTo({ url: '/pages/login/index' });
+          // wx.navigateTo({ url: '/pages/profile/index' });
           reject(res);
           return;
         }
@@ -148,10 +153,8 @@ function upload({ url, filePath, name = 'file', formData = {}, headers = {}, tim
       timeout: timeoutScaled,
       success: (res) => {
         // 统一处理 401（token 过期/无效）
-        if (res.statusCode === 401) {
-          try {
-            wx.removeStorageSync('token');
-          } catch (e) {}
+        if (res.statusCode === 401 || res.statusCode === 403) {
+          clearAuthTokens();
           reject(res);
           return;
         }
@@ -197,7 +200,7 @@ function setToken(token) {
  * 清除 token
  */
 function clearToken() {
-  wx.removeStorageSync('token');
+  clearAuthTokens();
 }
 
 module.exports = {

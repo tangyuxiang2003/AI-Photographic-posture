@@ -113,7 +113,8 @@ Page({
         if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
         try { console.log('[analyze] upload resp(single)', res.statusCode, res.data); } catch (e2) {}
         const body = JSON.parse(res.data || '{}');
-        if (body.code !== 0) throw new Error(body.msg || '服务错误');
+        const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
+        if (!ok) throw new Error(body.msg || '服务错误');
         const images = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
         try { console.log('[analyze] images(single)', images); } catch (e3) {}
         this.setData({ images, done: true, progress: 100 });
@@ -162,7 +163,8 @@ Page({
             if (res.statusCode === 401 || res.statusCode === 403) return reject(new Error('未授权或登录过期'));
             try { console.log('[analyze] upload resp(multi item)', res.statusCode, res.data); } catch (e2) {}
             const body = JSON.parse(res.data || '{}');
-            if (body.code !== 0) return reject(new Error(body.msg || '服务错误'));
+            const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
+            if (!ok) return reject(new Error(body.msg || '服务错误'));
             const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
             try { console.log('[analyze] images(multi item)', arr); } catch (e3) {}
             resolve(arr);
