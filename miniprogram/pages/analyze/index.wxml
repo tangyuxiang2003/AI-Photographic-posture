@@ -17,6 +17,24 @@
     </block>
   </view>
 
+  <!-- 常驻：继续优化区域（不弹窗） -->
+  <view class="refine-card">
+    <view class="refine-title">继续优化</view>
+    <textarea class="refine-textarea"
+              placeholder="描述你期望的姿势、风格、情绪等（可选）"
+              bindinput="onRefinedPromptInput"
+              value="{{refinedPrompt}}"
+              auto-height
+              maxlength="300" />
+    <view class="refine-actions">
+      <button class="refine-btn {{(!done || refining) ? 'refine-btn--disabled' : ''}}"
+              bindtap="onGenerateWithRefinedPrompt"
+              disabled="{{!done || refining}}">
+        继续优化
+      </button>
+    </view>
+  </view>
+
   <!-- 失败兜底 -->
   <view wx:if="{{failed}}" class="empty">生成失败，请重试</view>
 </view>

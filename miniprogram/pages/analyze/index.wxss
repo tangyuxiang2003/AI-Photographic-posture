@@ -62,3 +62,43 @@ page { background: #FFF7FA; }
 /* 动画 */
 .fade-in { animation: fadeIn 360ms ease-out both; }
 @keyframes fadeIn { from { opacity:0; transform: translateY(8rpx);} to { opacity:1; transform: translateY(0);} }
+
+/* —— 继续优化区域 —— */
+.refine-card {
+  margin-top: 28rpx;
+  background: #fff;
+  border: 2rpx solid #F4D9E1;
+  border-radius: 20rpx;
+  padding: 20rpx;
+}
+.refine-title {
+  color: #7A3F60;
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+.refine-textarea {
+  min-height: 160rpx;
+  border: 2rpx solid #F4D9E1;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  color: #7A3F60;
+  background: #fff;
+}
+.refine-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20rpx;
+}
+.refine-btn {
+  background: #ff8eb5;
+  color: #fff;
+  border: none;
+  border-radius: 24rpx;
+  padding: 16rpx 32rpx;
+}
+.refine-btn--disabled,
+.refine-btn[disabled] {
+  background: #ffd1e1;
+  color: rgba(255,255,255,0.7);
+}

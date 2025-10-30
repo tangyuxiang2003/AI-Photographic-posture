@@ -24,7 +24,13 @@ Page({
     progress: 0,
     done: false,
     failed: false,
-    images: [] // string[]，保存后端 data[].imageUrl
+    images: [], // string[]，保存后端 data[].imageUrl
+    refinedPrompt: '',
+    lastLocalPath: '',
+    lastLocalPaths: [],
+    lastUserId: undefined,
+    lastDesc: '',
+    refining: false
   },
 
   onLoad() {
@@ -97,6 +103,7 @@ Page({
     const uidParam = normalizeUserId(userId);
     const uid = uidStore !== undefined ? uidStore : uidParam;
 
+    this.setData({ lastLocalPath: localFilePath, lastLocalPaths: [], lastUserId: uid, lastDesc: desc || '' });
     const hdr1 = getAuthHeader();
     const form = { content: desc || '' };
     if (uid !== undefined) form.userId = uid;
@@ -172,6 +179,8 @@ Page({
         }).catch(reject);
       }));
 
+      // 记录本次批量任务的上下文（保留以便后续“优化描述”复用）
+      this.setData({ lastLocalPaths: Array.isArray(localPaths) ? localPaths : [], lastLocalPath: '', lastDesc: desc || '' });
       const results = await Promise.all(tasks);
       const images = Array.from(new Set(results.flat()));
       try { console.log('[analyze] images(multi merged)', images); } catch (e6) {}
@@ -187,6 +196,87 @@ Page({
   onPreview(e) {
     const current = e.currentTarget.dataset.url;
     wx.previewImage({ current, urls: this.data.images });
+  },
+
+  // —— 继续优化 —— //
+  onRefinedPromptInput(e) {
+    this.setData({ refinedPrompt: (e.detail && e.detail.value) || '' });
+  },
+  async onGenerateWithRefinedPrompt() {
+    if (!this.data.done || this.data.refining) {
+      wx.showToast({ title: '当前仍在生成中，请稍后', icon: 'none' });
+      return;
+    }
+    const prompt = (this.data.refinedPrompt || '').trim();
+    if (!prompt) {
+      wx.showToast({ title: '请输入优化描述', icon: 'none' });
+      return;
+    }
+    const { hasToken, getAuth } = require('../../utils/storage');
+    if (!hasToken()) {
+      wx.showToast({ title: '请先登录获取Token', icon: 'none' });
+      return;
+    }
+
+    const header = getAuthHeader();
+    const auth = (getAuth && getAuth()) || {};
+    const uidStore = normalizeUserId(auth.userId);
+    const uid = uidStore !== undefined ? uidStore : normalizeUserId(this.data.lastUserId);
+
+    const formBase = { content: prompt };
+    if (uid !== undefined) formBase.userId = uid;
+
+    const { upload } = require('../../utils/request');
+    const lastPaths = Array.isArray(this.data.lastLocalPaths) ? this.data.lastLocalPaths : [];
+    const lastPath = this.data.lastLocalPath;
+
+    wx.showLoading({ title: '重新生成中...', mask: true });
+    this.setData({ refining: true });
+    try {
+      let newImages = [];
+      if (lastPaths.length > 0) {
+        // 批量复用
+        const tasks = lastPaths.map(fp =>
+          upload({ url: '/api/image/upload', filePath: fp, name: 'file', formData: formBase })
+            .then((res) => {
+              if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
+              const body = JSON.parse(res.data || '{}');
+              const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
+              if (!ok) throw new Error(body.msg || '服务错误');
+              const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+              return arr;
+            })
+        );
+        const results = await Promise.all(tasks);
+        newImages = Array.from(new Set(results.flat()));
+      } else if (lastPath) {
+        // 单张复用
+        const res = await upload({ url: '/api/image/upload', filePath: lastPath, name: 'file', formData: formBase });
+        if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
+        const body = JSON.parse(res.data || '{}');
+        const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
+        if (!ok) throw new Error(body.msg || '服务错误');
+        newImages = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+      } else {
+        wx.showToast({ title: '没有可复用的原图', icon: 'none' });
+        return;
+      }
+
+      // 追加而非覆盖，保留原图
+      const merged = Array.from(new Set([...(this.data.images || []), ...newImages]));
+      this.setData({
+        images: merged,
+        done: true,
+        refinedPrompt: ''
+      });
+      wx.showToast({ title: '已生成新图片', icon: 'success' });
+    } catch (e) {
+      try { console.error('[analyze] refine regenerate error', e); } catch(_) {}
+      wx.showToast({ title: (e && e.message) || '重新生成失败', icon: 'none' });
+    } finally {
+      this.setData({ refining: false });
+      wx.hideLoading();
+    }
   },
 
   /* 内部：状态与伪进度 */
