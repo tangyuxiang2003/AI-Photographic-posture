@@ -19,7 +19,7 @@ const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://
  * @param {Object} [options.headers={}] - 额外请求头（会与默认头合并）
  * @returns {Promise<WechatMiniprogram.RequestSuccessCallbackResult>}
  */
-function request({ url, method = 'GET', data = {}, headers = {} }) {
+function request({ url, method = 'GET', data = {}, headers = {}, timeout }) {
   const auth = getAuth() || {};
   const token = auth.token || '';
   const userId = auth.userId;
@@ -49,12 +49,16 @@ function request({ url, method = 'GET', data = {}, headers = {} }) {
     finalData = { userId, ...finalData };
   }
 
+  const baseTimeout = typeof timeout === 'number' ? timeout : 60000;
+  const timeoutScaled = Math.floor(baseTimeout * 1.5);
+
   return new Promise((resolve, reject) => {
     wx.request({
       url: (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) ? finalUrl : (BASE_URL + finalUrl),
       method: m,
       data: finalData,
       header: finalHeaders,
+      timeout: timeoutScaled,
       success: (res) => {
         // 统一处理 401（token 过期/无效）
         if (res.statusCode === 401) {
@@ -119,7 +123,7 @@ function post(url, body = {}, headers = {}) {
  * @param {Object} [options.headers={}] - 额外请求头（会与默认头合并）
  * @returns {Promise<WechatMiniprogram.UploadFileSuccessCallbackResult>}
  */
-function upload({ url, filePath, name = 'file', formData = {}, headers = {} }) {
+function upload({ url, filePath, name = 'file', formData = {}, headers = {}, timeout }) {
   const auth = getAuth() || {};
   const token = auth.token || '';
   const userId = auth.userId;
@@ -131,6 +135,9 @@ function upload({ url, filePath, name = 'file', formData = {}, headers = {} }) {
 
   const finalForm = { userId, ...(formData || {}) };
 
+  const baseTimeout = typeof timeout === 'number' ? timeout : 60000;
+  const timeoutScaled = Math.floor(baseTimeout * 1.5);
+
   return new Promise((resolve, reject) => {
     wx.uploadFile({
       url: (url.startsWith('http://') || url.startsWith('https://')) ? url : (BASE_URL + url),
@@ -138,6 +145,7 @@ function upload({ url, filePath, name = 'file', formData = {}, headers = {} }) {
       name,
       formData: finalForm,
       header: finalHeaders,
+      timeout: timeoutScaled,
       success: (res) => {
         // 统一处理 401（token 过期/无效）
         if (res.statusCode === 401) {

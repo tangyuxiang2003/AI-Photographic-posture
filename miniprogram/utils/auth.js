@@ -36,11 +36,14 @@ function requestLogin({ loginCode, userInfoCode, userInfo }) {
   };
 
   // 优先使用 wx.request，并将数据以字符串提交
+  const baseTimeout = 60000;
+  const timeoutScaled = Math.floor(baseTimeout * 1.5);
   return new Promise((resolve, reject) => {
     wx.request({
       url,
       method: 'POST',
       header: headers,
+      timeout: timeoutScaled,
       data: payload, // 直接传 JSON 对象，字段已统一为字符串
       success: (r) => {
         const status = r?.statusCode || 0;
@@ -60,7 +63,7 @@ function requestLogin({ loginCode, userInfoCode, userInfo }) {
       fail: (e) => {
         // 若 wx.request 网络失败且 axios 可用，尝试 axios 兜底
         if (axios) {
-          axios.post(url, payload, { headers })
+          axios.post(url, payload, { headers, timeout: timeoutScaled })
             .then((r2) => {
               const status2 = r2?.status || 0;
               const body2 = r2?.data || {};

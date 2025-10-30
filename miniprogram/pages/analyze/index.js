@@ -114,7 +114,7 @@ Page({
         try { console.log('[analyze] upload resp(single)', res.statusCode, res.data); } catch (e2) {}
         const body = JSON.parse(res.data || '{}');
         if (body.code !== 0) throw new Error(body.msg || '服务错误');
-        const images = (Array.isArray(body.data) ? body.data : []).map(i => i.imageUrl).filter(Boolean);
+        const images = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
         try { console.log('[analyze] images(single)', images); } catch (e3) {}
         this.setData({ images, done: true, progress: 100 });
       } catch (e) {
@@ -163,7 +163,7 @@ Page({
             try { console.log('[analyze] upload resp(multi item)', res.statusCode, res.data); } catch (e2) {}
             const body = JSON.parse(res.data || '{}');
             if (body.code !== 0) return reject(new Error(body.msg || '服务错误'));
-            const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.imageUrl).filter(Boolean);
+            const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
             try { console.log('[analyze] images(multi item)', arr); } catch (e3) {}
             resolve(arr);
           } catch (e) { try { console.error('[analyze] fail(multi item)', e); } catch (e4) {} reject(e); }
