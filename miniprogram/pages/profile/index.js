@@ -162,6 +162,17 @@ Page({
   // 用户选择头像
   onChooseAvatar(e) {
     const url = e?.detail?.avatarUrl || '';
+    if (!url) return;
+    // 已登录：直接更新正式头像并持久化
+    if (this.data.profile && this.data.profile.hasAuth) {
+      const merged = { ...this.data.profile, avatarUrl: url, hasAuth: true };
+      this.setData({ profile: merged });
+      try { wx.setStorageSync('profile_basic', merged); } catch (err) {}
+      try { console.log('[profile] avatar updated after auth', merged.avatarUrl); } catch (_) {}
+      wx.showToast({ title: '头像已更新', icon: 'success' });
+      return;
+    }
+    // 未登录：先作为临时头像，后续点“点击登录”再走授权与落库
     this.setData({ tempAvatarUrl: url });
   },
 
@@ -224,6 +235,40 @@ Page({
       },
       fail: () => {
         wx.showToast({ title: '已取消授权', icon: 'none' });
+      }
+    });
+  },
+
+  // 已登录后修改昵称
+  onEditNickname() {
+    if (!this.data.profile || !this.data.profile.hasAuth) {
+      wx.showToast({ title: '请先登录', icon: 'none' });
+      return;
+    }
+    const current = this.data.profile.nickName || '';
+    wx.showModal({
+      title: '修改昵称',
+      editable: true,
+      placeholderText: '输入新昵称',
+      content: current,
+      confirmText: '保存',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          const name = String(res.content || '').trim();
+          if (!name) {
+            wx.showToast({ title: '昵称不能为空', icon: 'none' });
+            return;
+          }
+          const merged = { ...this.data.profile, nickName: name, hasAuth: true };
+          this.setData({ profile: merged });
+          try { wx.setStorageSync('profile_basic', merged); } catch (e) {}
+          try {
+            const app = getApp && getApp();
+            if (app && app.globalData) app.globalData.userInfo = { ...merged };
+          } catch (e) {}
+          wx.showToast({ title: '已保存', icon: 'success' });
+        }
       }
     });
   }

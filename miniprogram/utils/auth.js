@@ -146,19 +146,52 @@ function getUserInfoWithConfirm(desc = '用于完善个人资料') {
 const { saveAuth } = require('./storage');
 
 function persistAndSync(dataUser, fallbackUser) {
-  const mergedUser = {
-    nickName: (dataUser && dataUser.nickName) || (fallbackUser && fallbackUser.nickName) || '微信昵称',
-    avatarUrl: (dataUser && dataUser.avatarUrl) || (fallbackUser && fallbackUser.avatarUrl) || ''
+  // 规范化取值，优先非空有效值，避免服务端空字符串覆盖本地选择的头像/昵称
+  const pickNonEmpty = (...vals) => {
+    for (const v of vals) {
+      const s = typeof v === 'string' ? v.trim() : v;
+      if (s !== undefined && s !== null && String(s) !== '') return String(s);
+    }
+    return '';
   };
+
+  const nick = pickNonEmpty(
+    dataUser && dataUser.nickName,
+    fallbackUser && fallbackUser.nickName,
+    '微信昵称'
+  );
+  const avatar = pickNonEmpty(
+    dataUser && dataUser.avatarUrl,
+    fallbackUser && fallbackUser.avatarUrl,
+    ''
+  );
+
+  const mergedUser = { nickName: nick, avatarUrl: avatar };
+
   // 兼容旧键，同时写入统一的 authData
   const t = (dataUser && dataUser.token) || '';
-  try { if (t) { wx.setStorageSync('auth_token', t); wx.setStorageSync('token', t); } } catch (e) {}
-  try { wx.setStorageSync('profile_basic', { ...mergedUser, hasAuth: true }); } catch (e) {}
+  try {
+    if (t) {
+      wx.setStorageSync('auth_token', t);
+      wx.setStorageSync('token', t);
+    }
+  } catch (e) {}
+
+  // 持久化到 profile_basic，确保 hasAuth: true
+  try {
+    const profilePersist = { ...mergedUser, hasAuth: true };
+    wx.setStorageSync('profile_basic', profilePersist);
+    try { console.log('[auth] persist profile_basic', profilePersist); } catch (_) {}
+  } catch (e) {}
+
+  // 同步到全局（如存在）
   const app = getApp && getApp();
   if (app && app.globalData) app.globalData.userInfo = { ...mergedUser, hasAuth: true };
+
   // 尝试写入 userId（若后端返回）
   const uid = (dataUser && (dataUser.id || dataUser.userId)) || undefined;
   try { saveAuth({ token: t, userId: uid }); } catch (e) {}
+
   return mergedUser;
 }
 

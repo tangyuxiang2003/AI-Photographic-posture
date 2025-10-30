@@ -7,10 +7,24 @@
   <!-- 档案卡片（静态） -->
   <view class="profile-card">
     <view class="profile-left">
-      <view class="avatar-wrap">
-        <image wx:if="{{profile.hasAuth && profile.avatarUrl}}" class="avatar" src="{{profile.avatarUrl}}" mode="aspectFill"></image>
-        <view wx:else class="avatar placeholder"></view>
-      </view>
+      <!-- 登录后：头像区域可点击选择微信头像；未登录：占位 -->
+      <block wx:if="{{profile.hasAuth}}">
+        <view class="avatar-wrap" style="position: relative;">
+          <image class="avatar" src="{{profile.avatarUrl}}" mode="aspectFill"></image>
+          <!-- 透明按钮覆盖头像，实现点击头像选择微信头像 -->
+          <button class="avatar-chooser-btn"
+                  open-type="chooseAvatar"
+                  bindchooseavatar="onChooseAvatar"
+                  hover-class="none"
+                  style="position:absolute;left:0;top:0;width:120rpx;height:120rpx;opacity:0;background:transparent;border:none;padding:0;">
+          </button>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="avatar-wrap">
+          <view class="avatar placeholder"></view>
+        </view>
+      </block>
       <view class="profile-info">
         <view class="nickname-row">
           <view class="nickname">{{profile.hasAuth ? profile.nickName : '未登录'}}</view>
@@ -22,12 +36,11 @@
         </view>
       </view>
     </view>
-    <view wx:if="{{!profile.hasAuth}}" style="display:flex; flex-direction:column; gap:16rpx; align-items:flex-start;">
-      <!-- 选择头像 + 输入昵称（隐私合规） -->
-      <button class="btn-mini" size="mini" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">选择头像</button>
-      <input class="nickname-input" type="nickname" placeholder="请输入昵称"
-             bindinput="onNicknameInput" confirm-type="done" />
+    <view wx:if="{{!profile.hasAuth}}" style="display:flex; flex:1; height:100%; align-items:center; justify-content:center;">
       <button class="btn-mini primary" size="mini" bindtap="onTapProfileLogin">点击登录</button>
+    </view>
+    <view wx:if="{{profile.hasAuth}}" style="display:flex; flex:1; height:100%; align-items:center; justify-content:center;">
+      <button class="btn-mini primary" size="mini" bindtap="onEditNickname" style="font-size:22rpx;">修改昵称</button>
     </view>
   </view>
 
