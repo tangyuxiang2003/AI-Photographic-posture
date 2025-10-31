@@ -13,9 +13,15 @@
   <!-- 完成：一次性展示所有返回图片 -->
   <view wx:if="{{done}}" class="grid">
     <block wx:for="{{images}}" wx:key="*this">
-      <image class="grid-item fade-in" mode="aspectFill" src="{{item}}" bindtap="onPreview" data-url="{{item}}" />
+      <view class="grid-item-wrap fade-in">
+        <image class="grid-item" mode="aspectFill" src="{{item}}" bindtap="onPreview" data-url="{{item}}" />
+        <view class="fav-btn {{favMap[item] ? 'fav--active' : ''}}" catchtap="onToggleFavorite" data-url="{{item}}"></view>
+      </view>
     </block>
   </view>
+
+  <!-- 生成完成反馈 -->
+  <view wx:if="{{done && feedbackText}}" class="feedback-bubble">{{feedbackText}}</view>
 
   <!-- 常驻：继续优化区域（不弹窗） -->
   <view class="refine-card">

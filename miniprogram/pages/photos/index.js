@@ -4,51 +4,12 @@ Page({
     themeBg: '#FFF7FA',
     query: '',
     activeTab: '全部',
-    favorites: [
-      {
-        id: 'p1',
-        title: '韩系咖啡店回眸',
-        cover: '../../images/ai_example1.png',
-        tags: ['韩系','咖啡店','回眸'],
-        type: '场景'
-      },
-      {
-        id: 'p2',
-        title: '法式花墙托腮',
-        cover: '../../images/ai_example2.png',
-        tags: ['法式','花墙','托腮'],
-        type: '风格'
-      },
-      {
-        id: 'p3',
-        title: '公园坐姿显腿长',
-        cover: '../../images/default-goods-image.png',
-        tags: ['公园','坐姿','显腿长'],
-        type: '姿势'
-      },
-      {
-        id: 'p4',
-        title: '通勤极简抱臂',
-        cover: '../../images/create_env.png',
-        tags: ['通勤','极简','抱臂'],
-        type: '风格'
-      },
-      {
-        id: 'p5',
-        title: '海边逆光拨发',
-        cover: '../../images/scf-enter.png',
-        tags: ['海边','逆光','拨发'],
-        type: '场景'
-      },
-      {
-        id: 'p6',
-        title: '书店通道回眸',
-        cover: '../../images/database.png',
-        tags: ['书店','回眸','抓拍'],
-        type: '场景'
-      }
-    ],
-    filtered: []
+    favorites: [],
+    filtered: [],
+    // 标签编辑
+    showTagEditor: false,
+    editingId: null,
+    editingTags: ''
   },
 
   // 预处理：为每条收藏预计算 searchText，减少筛选时字符串拼接与大小写转换
@@ -66,18 +27,32 @@ Page({
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
       this.applyThemeColor(bg);
     } catch (e) {}
-    try{
-      const cached = wx.getStorageSync('app_favorites')
-      const base = Array.isArray(cached) && cached.length ? cached : this.data.favorites
-      const normalized = this.normalizeFavorites(base)
-      this.setData({ favorites: normalized }, () => {
-        this.computeFiltered()
-        wx.showShareMenu({ withShareTicket: true })
-      })
-    }catch(_){
-      this.computeFiltered()
-      wx.showShareMenu({ withShareTicket: true })
+
+    // 先读本地缓存回显（仅对“使用过且收藏过”的用户），再请求后端刷新
+    try {
+      const used = !!wx.getStorageSync('has_favorited_before');
+      if (used) {
+        const cached = wx.getStorageSync('app_favorites');
+        const base = Array.isArray(cached) && cached.length ? cached : [];
+        const normalized = this.normalizeFavorites(base);
+        this.setData({ favorites: normalized }, () => {
+          this.computeFiltered();
+          wx.showShareMenu({ withShareTicket: true });
+        });
+      } else {
+        // 新用户：不显示任何项目缓存的照片
+        this.setData({ favorites: [] }, () => {
+          this.computeFiltered();
+          wx.showShareMenu({ withShareTicket: true });
+        });
+      }
+    } catch(_) {
+      this.computeFiltered();
+      wx.showShareMenu({ withShareTicket: true });
     }
+
+    // 异步拉取后端收藏
+    this.fetchFavorites();
   },
 
   onShow(){
@@ -87,6 +62,30 @@ Page({
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
       this.applyThemeColor(bg);
     } catch (e) {}
+
+    // 若有 token，进入页面时刷新一次收藏列表；否则延迟重试
+    try {
+      const { hasToken } = require('../../utils/storage');
+      if (hasToken()) {
+        this.fetchFavorites();
+      } else {
+        // 最多重试 3 次：300ms / 1000ms / 2000ms
+        const retry = (ms, left) => {
+          if (left <= 0) return;
+          setTimeout(() => {
+            try {
+              const { hasToken } = require('../../utils/storage');
+              if (hasToken()) {
+                this.fetchFavorites();
+              } else {
+                retry(ms * 2, left - 1);
+              }
+            } catch(_) {}
+          }, ms);
+        };
+        retry(300, 3);
+      }
+    } catch(_) {}
   },
 
   // 应用主题背景到导航栏、页面与底部tabBar
@@ -155,6 +154,57 @@ Page({
     this.setData({ query: '' }, this.computeFiltered)
   },
 
+  // 打开标签编辑面板
+  onOpenTagEditor(e){
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    const item = (this.data.favorites || []).find(x => x.id === id);
+    const preset = (item && Array.isArray(item.tags) ? item.tags : []).join(', ');
+    this.setData({
+      showTagEditor: true,
+      editingId: id,
+      editingTags: preset
+    });
+  },
+
+  onEditTagsInput(e){
+    this.setData({ editingTags: e.detail.value || '' });
+  },
+
+  // 保存标签到本地
+  onSaveTags(){
+    const id = this.data.editingId;
+    if (!id) return this.onCloseTagEditor();
+
+    const raw = (this.data.editingTags || '');
+    const tags = raw
+      .split(/[,，\s]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    try {
+      const fav = require('../../utils/favorites');
+      fav.setPhotoTags(id, tags);
+      // 读取本地并规范化后刷新（包含 searchText）
+      const list = fav.getAll();
+      const normalized = this.normalizeFavorites(list);
+      this.setData({ favorites: normalized }, this.computeFiltered);
+    } catch(_) {
+      // 回退到内存更新
+      const prev = this.data.favorites.slice();
+      const next = prev.map(it => it.id === id ? { ...it, tags } : it);
+      try { wx.setStorageSync('app_favorites', next) } catch(_) {}
+      this.setData({ favorites: this.normalizeFavorites(next) }, this.computeFiltered);
+    }
+
+    this.onCloseTagEditor();
+    wx.showToast({ title: '已保存风格标签', icon: 'none' });
+  },
+
+  onCloseTagEditor(){
+    this.setData({ showTagEditor: false, editingId: null, editingTags: '' });
+  },
+
   computeFiltered(){
     const { favorites, activeTab, query } = this.data
     const q = (query || '').trim().toLowerCase()
@@ -168,12 +218,47 @@ Page({
     this.setData({ filtered: list })
   },
 
-  onToggleFavorite(e){
-    const id = e.currentTarget.dataset.id
-    const next = this.data.favorites.filter(it => it.id !== id)
+  // 取消收藏（优先本地；有登录再调用后端）
+  async onToggleFavorite(e){
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+
+    const prev = this.data.favorites.slice();
+    const next = prev.filter(it => it.id !== id);
+
+    // 本地更新 UI 和缓存
     try { wx.setStorageSync('app_favorites', next) } catch(_) {}
-    this.setData({ favorites: next }, this.computeFiltered)
-    wx.showToast({ title: '已取消收藏', icon: 'none' })
+    this.setData({ favorites: next }, this.computeFiltered);
+
+    // 判断是否需要调用后端
+    let userId;
+    let canCallServer = false;
+    try {
+      const { hasToken, getAuth } = require('../../utils/storage');
+      canCallServer = !!(hasToken && hasToken());
+      if (canCallServer) {
+        const auth = (getAuth && getAuth()) || {};
+        const n = Number(auth.userId);
+        userId = Number.isFinite(n) ? String(Math.trunc(n)) : undefined;
+      }
+    } catch(_) {}
+
+    if (!canCallServer) {
+      wx.showToast({ title: '已取消收藏', icon: 'none' });
+      return;
+    }
+
+    // 有 token 才调用后端
+    try {
+      const { post } = require('../../utils/request');
+      await post('/api/collection/remove', { aiImageId: id, userId });
+      wx.showToast({ title: '已取消收藏', icon: 'none' });
+    } catch (err) {
+      // 回滚
+      try { wx.setStorageSync('app_favorites', prev) } catch(_) {}
+      this.setData({ favorites: prev }, this.computeFiltered);
+      wx.showToast({ title: '取消失败，请稍后重试', icon: 'none' });
+    }
   },
 
   onShare(e){
@@ -188,6 +273,37 @@ Page({
     arr.sort(() => 0.5 - Math.random())
     this.setData({ favorites: arr }, this.computeFiltered)
     wx.showToast({ title: '已为你推荐新顺序', icon: 'none' })
+  },
+
+  // 后端拉取收藏列表（按你的接口：/api/collection/list）
+  async fetchFavorites() {
+    try {
+      const { hasToken, getAuth } = require('../../utils/storage');
+      if (!hasToken()) return;
+      const auth = (getAuth && getAuth()) || {};
+      const uidNum = Number(auth.userId);
+      const userId = Number.isFinite(uidNum) ? String(Math.trunc(uidNum)) : undefined;
+
+      const { get } = require('../../utils/request');
+      // 后端为 GET /api/collection/list，这里改为 GET 并通过 query 传参
+      const resp = await get('/api/collection/list', { userId });
+      const items = resp?.data?.items || resp?.data || [];
+      const base = Array.isArray(items) ? items : [];
+      // 规范化字段：id 用 aiImageId；cover 用 imageUrl
+      const normalized = this.normalizeFavorites(base.map(x => ({
+        id: x.aiImageId || x.id,
+        title: x.title || 'AI生成图',
+        cover: x.imageUrl || x.cover || x.url,
+        tags: Array.isArray(x.tags) ? x.tags : [],
+        type: x.type || 'AI'
+      })));
+      try { wx.setStorageSync('app_favorites', normalized) } catch(_) {}
+      // 老用户：若后端返回存在收藏，标记为已收藏过
+      if (normalized.length > 0) { try { wx.setStorageSync('has_favorited_before', true) } catch(_) {} }
+      this.setData({ favorites: normalized }, this.computeFiltered);
+    } catch (e) {
+      try { console.warn('[photos] fetchFavorites failed', e) } catch(_) {}
+    }
   },
 
   // 微信分享给好友/群聊

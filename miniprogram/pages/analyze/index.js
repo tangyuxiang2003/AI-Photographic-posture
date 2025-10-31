@@ -30,7 +30,10 @@ Page({
     lastLocalPaths: [],
     lastUserId: undefined,
     lastDesc: '',
-    refining: false
+    refining: false,
+    feedbackText: '',
+    favMap: {},
+    aiIdMap: {} // url -> aiImageId 映射
   },
 
   onLoad() {
@@ -61,6 +64,13 @@ Page({
   },
 
   onShow() {
+    // 同步本地收藏高亮
+    try {
+      const favs = wx.getStorageSync('favorites') || [];
+      const map = {};
+      (Array.isArray(favs) ? favs : []).forEach(u => { if (u) map[u] = true; });
+      this.setData({ favMap: map });
+    } catch(_) {}
     // 实时校验 token，避免因跳转过快或缓存导致误判；并加入延迟重试读取
     const header = getAuthHeader();
     const hasAuth = !!header.Authorization;
@@ -114,7 +124,8 @@ Page({
       url: '/api/image/upload',
       filePath: localFilePath,
       name: 'file',
-      formData: form
+      formData: form,
+      header: getAuthHeader()
     }).then((res) => {
       try {
         if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
@@ -122,9 +133,16 @@ Page({
         const body = JSON.parse(res.data || '{}');
         const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
         if (!ok) throw new Error(body.msg || '服务错误');
-        const images = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
-        try { console.log('[analyze] images(single)', images); } catch (e3) {}
-        this.setData({ images, done: true, progress: 100 });
+        const items = Array.isArray(body.data) ? body.data : [];
+        const images = items.map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+        const aiIdMap = {};
+        items.forEach(i => {
+          const url = i.aiImageUrl || i.imageUrl;
+          const id = i.id || i.aiImageId;
+          if (url && (id != null)) aiIdMap[url] = String(id);
+        });
+        try { console.log('[analyze] images(single)', images, aiIdMap); } catch (e3) {}
+        this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
       } catch (e) {
         try { console.error('[analyze] fail(single)', e); } catch (e4) {}
         this._failout(e && e.message);
@@ -164,7 +182,8 @@ Page({
           url: '/api/image/upload',
           filePath: fp,
           name: 'file',
-          formData: form
+          formData: form,
+          header: getAuthHeader()
         }).then((res) => {
           try {
             if (res.statusCode === 401 || res.statusCode === 403) return reject(new Error('未授权或登录过期'));
@@ -172,8 +191,17 @@ Page({
             const body = JSON.parse(res.data || '{}');
             const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
             if (!ok) return reject(new Error(body.msg || '服务错误'));
-            const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
-            try { console.log('[analyze] images(multi item)', arr); } catch (e3) {}
+            const items = Array.isArray(body.data) ? body.data : [];
+            const arr = items.map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+            // 同步写入每项的 aiImageId 映射
+            const map = Object.assign({}, this.data.aiIdMap || {});
+            items.forEach(i => {
+              const url = i.aiImageUrl || i.imageUrl;
+              const id = i.id || i.aiImageId;
+              if (url && (id != null)) map[url] = String(id);
+            });
+            this.setData({ aiIdMap: map });
+            try { console.log('[analyze] images(multi item)', arr, map); } catch (e3) {}
             resolve(arr);
           } catch (e) { try { console.error('[analyze] fail(multi item)', e); } catch (e4) {} reject(e); }
         }).catch(reject);
@@ -182,9 +210,14 @@ Page({
       // 记录本次批量任务的上下文（保留以便后续“优化描述”复用）
       this.setData({ lastLocalPaths: Array.isArray(localPaths) ? localPaths : [], lastLocalPath: '', lastDesc: desc || '' });
       const results = await Promise.all(tasks);
+      // results 是各项返回的 url 数组，但无法拿到 id；这里并行任务里已在每项中解析 body，
+      // 因此改为在上面的单项解析时返回 {urls, map} 更复杂。为保持最小改动，我们在这里仅合并 url，
+      // 并依赖单项解析处的日志无法带出 id。若后端需要批量 id，请后续在多传时返回 id。
       const images = Array.from(new Set(results.flat()));
-      try { console.log('[analyze] images(multi merged)', images); } catch (e6) {}
-      this.setData({ images, done: true, progress: 100 });
+      const aiIdMap = Object.assign({}, this.data.aiIdMap || {});
+      // 如果后端在多文件返回中也包含 id，需要在每个 then 中构造 {arr, map}，此处合并 map。
+      try { console.log('[analyze] images(multi merged)', images, aiIdMap); } catch (e6) {}
+      this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
     } catch (e) {
       console.error(e);
       this._failout(e && e.message);
@@ -196,6 +229,62 @@ Page({
   onPreview(e) {
     const current = e.currentTarget.dataset.url;
     wx.previewImage({ current, urls: this.data.images });
+  },
+
+  // 切换收藏（后端接口 + 本地缓存；发送 userId 与 aiImageId）
+  async onToggleFavorite(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+
+    const aiImageId = this.data.aiIdMap && this.data.aiIdMap[url];
+    if (!aiImageId) {
+      wx.showToast({ title: '缺少图片ID，无法收藏', icon: 'none' });
+      return;
+    }
+
+    // 取 userId
+    let userId;
+    try {
+      const { getAuth } = require('../../utils/storage');
+      const auth = (getAuth && getAuth()) || {};
+      const n = Number(auth.userId);
+      userId = Number.isFinite(n) ? String(Math.trunc(n)) : undefined;
+    } catch(_) {}
+
+    // 乐观更新本地状态
+    const favMap = Object.assign({}, this.data.favMap || {});
+    const willFav = !favMap[url];
+    if (willFav) favMap[url] = true; else delete favMap[url];
+
+    // 同步本地简单列表与收藏页对象列表（id 用 aiImageId，cover 用 url）
+    const list = Object.keys(favMap);
+    try { wx.setStorageSync('favorites', list); } catch(_) {}
+    const objList = list.map(u => ({ id: this.data.aiIdMap[u], title: 'AI生成图', cover: u, tags: [], type: 'AI' }));
+    try { wx.setStorageSync('app_favorites', objList); } catch(_) {}
+    this.setData({ favMap });
+    // 记录用户已进行过收藏行为，供收藏页判定“老用户”恢复历史
+    try { if (list.length > 0) wx.setStorageSync('has_favorited_before', true); } catch(_) {}
+    wx.showToast({ title: willFav ? '已收藏' : '已取消', icon: 'none', duration: 800 });
+
+    // 调用后端接口（按你提供的路径）
+    try {
+      const { post } = require('../../utils/request');
+      if (willFav) {
+        await post('/api/collection/add', { userId, aiImageId });
+      } else {
+        await post('/api/collection/remove', { userId, aiImageId });
+      }
+    } catch (err) {
+      // 回滚
+      const rollback = Object.assign({}, this.data.favMap || {});
+      if (willFav) { delete rollback[url]; } else { rollback[url] = true; }
+      const rollList = Object.keys(rollback);
+      try { wx.setStorageSync('favorites', rollList); } catch(_) {}
+      const rollObj = rollList.map(u => ({ id: this.data.aiIdMap[u], title: 'AI生成图', cover: u, tags: [], type: 'AI' }));
+      try { wx.setStorageSync('app_favorites', rollObj); } catch(_) {}
+      this.setData({ favMap: rollback });
+      wx.showToast({ title: '操作失败，请稍后重试', icon: 'none' });
+    }
   },
 
   // —— 继续优化 —— //
@@ -237,13 +326,22 @@ Page({
       if (lastPaths.length > 0) {
         // 批量复用
         const tasks = lastPaths.map(fp =>
-          upload({ url: '/api/image/upload', filePath: fp, name: 'file', formData: formBase })
+          upload({ url: '/api/image/upload', filePath: fp, name: 'file', formData: formBase, header: getAuthHeader() })
             .then((res) => {
               if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
               const body = JSON.parse(res.data || '{}');
               const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
               if (!ok) throw new Error(body.msg || '服务错误');
-              const arr = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+              const items = Array.isArray(body.data) ? body.data : [];
+              const arr = items.map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+              // 为优化生成的图片同步写入 aiIdMap
+              const map = Object.assign({}, this.data.aiIdMap || {});
+              items.forEach(i => {
+                const url = i.aiImageUrl || i.imageUrl;
+                const id = i.id || i.aiImageId;
+                if (url && (id != null)) map[url] = String(id);
+              });
+              this.setData({ aiIdMap: map });
               return arr;
             })
         );
@@ -251,12 +349,21 @@ Page({
         newImages = Array.from(new Set(results.flat()));
       } else if (lastPath) {
         // 单张复用
-        const res = await upload({ url: '/api/image/upload', filePath: lastPath, name: 'file', formData: formBase });
+        const res = await upload({ url: '/api/image/upload', filePath: lastPath, name: 'file', formData: formBase, header: getAuthHeader() });
         if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
-        const body = JSON.parse(res.data || '{}');
+        let body = res.data;
+        if (typeof body === 'string') { try { body = JSON.parse(body); } catch(_) {} }
         const ok = !!body && (body.code === 0 || body.code === 200 || body.success === true || body.msg === '成功');
         if (!ok) throw new Error(body.msg || '服务错误');
-        newImages = (Array.isArray(body.data) ? body.data : []).map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+        const items = Array.isArray(body.data) ? body.data : [];
+        newImages = items.map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+        const map = Object.assign({}, this.data.aiIdMap || {});
+        items.forEach(i => {
+          const url = i.aiImageUrl || i.imageUrl;
+          const id = i.id || i.aiImageId;
+          if (url && (id != null)) map[url] = String(id);
+        });
+        this.setData({ aiIdMap: map });
       } else {
         wx.showToast({ title: '没有可复用的原图', icon: 'none' });
         return;
@@ -266,8 +373,10 @@ Page({
       const merged = Array.from(new Set([...(this.data.images || []), ...newImages]));
       this.setData({
         images: merged,
+        aiIdMap: this.data.aiIdMap || {},
         done: true,
-        refinedPrompt: ''
+        refinedPrompt: '',
+        feedbackText: this._genFeedback(true)
       });
       wx.showToast({ title: '已生成新图片', icon: 'success' });
     } catch (e) {
@@ -277,6 +386,22 @@ Page({
       this.setData({ refining: false });
       wx.hideLoading();
     }
+  },
+
+  _genFeedback(isRefine) {
+    const listBase = [
+      '太棒了！你的灵感很有感觉～',
+      '风格拿捏住了，继续微调会更赞。',
+      '这组很有氛围感，值得收藏！',
+      '小提示：试着补充光线/色调/情绪词，效果会更稳定。'
+    ];
+    const listRefine = [
+      '升级完成！新灵感已融入这组图。',
+      '越调越好看，继续探索你的专属风格吧～',
+      '这次优化很明显，试试再加一个色彩关键词？'
+    ];
+    const pool = isRefine ? listRefine.concat(listBase) : listBase;
+    return pool[Math.floor(Math.random() * pool.length)];
   },
 
   /* 内部：状态与伪进度 */
