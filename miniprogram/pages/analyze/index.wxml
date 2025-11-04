@@ -41,6 +41,10 @@
     </view>
   </view>
 
+  <view class="shoot-wrap">
+    <button class="refine-btn shoot-btn" bindtap="onStartCamera">开始拍摄</button>
+  </view>
+
   <!-- 失败兜底 -->
   <view wx:if="{{failed}}" class="empty">生成失败，请重试</view>
 </view>

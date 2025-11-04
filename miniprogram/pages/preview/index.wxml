@@ -1,0 +1,8 @@
+<view class="preview-page">
+  <image class="preview-image" src="{{imagePath}}" mode="widthFix" bindtap="onOpenPreview"></image>
+  <view class="bottom-bar">
+    <button class="bar-btn" bindtap="onSave">保存到相册</button>
+    <button class="bar-btn" bindtap="onRetake">重新拍摄</button>
+    <button class="bar-btn" bindtap="onBack">返回</button>
+  </view>
+</view>

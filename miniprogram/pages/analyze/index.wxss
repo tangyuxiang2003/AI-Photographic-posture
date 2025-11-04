@@ -104,6 +104,18 @@ page { background: #FFF7FA; }
   color: rgba(255,255,255,0.7);
 }
 
+/* 开始拍摄按钮（复用 refine-btn，配色区分） */
+.shoot-btn {
+  background: #ffb6c1; /* 浅粉色 */
+}
+
+/* 独立的“开始拍摄”容器：卡片下方居中 */
+.shoot-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 16rpx;
+}
+
 /* 生成完成反馈 */
 .feedback-bubble {
   margin: 16rpx 0 8rpx;

@@ -42,7 +42,8 @@
     "useCompilerPlugins": false,
     "condition": false,
     "swc": false,
-    "disableSWC": true
+    "disableSWC": true,
+    "ignoreUploadUnusedFiles": false
   },
   "appid": "wx64cb667d01534f31",
   "projectname": "quickstart-wx-cloud",

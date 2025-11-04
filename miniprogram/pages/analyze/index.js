@@ -388,6 +388,24 @@ Page({
     }
   },
 
+  // 原生相机拍摄并开始分析
+  onStartCamera() {
+    const { hasToken } = require('../../utils/storage');
+    if (!hasToken()) {
+      wx.showToast({ title: '请先登录获取Token', icon: 'none' });
+      return;
+    }
+    const desc = (this.data.refinedPrompt || '').trim();
+    wx.navigateTo({
+      url: '/pages/camera/index',
+      events: {
+        photoTaken: ({ tempFilePath }) => {
+          if (tempFilePath) this.startAnalyze(tempFilePath, desc, undefined);
+        }
+      }
+    });
+  },
+
   _genFeedback(isRefine) {
     const listBase = [
       '太棒了！你的灵感很有感觉～',

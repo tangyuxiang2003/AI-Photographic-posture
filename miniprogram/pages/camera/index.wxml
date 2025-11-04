@@ -1,0 +1,46 @@
+<!-- camera.wxml -->
+<view class="camera-container">
+  <!-- 相机预览区域 -->
+  <camera 
+    class="camera-preview" 
+    device-position="{{cameraPosition}}" 
+    flash="{{flash}}"
+    binderror="onCameraError"
+  ></camera>
+  
+  <!-- 顶部控制区域 (面积为底部的一半) -->
+  <view class="top-controls">
+    <view class="top-controls-inner">
+      <!-- 闪光灯控制 -->
+      <view class="control-icon" bindtap="toggleFlash">
+        <image src="{{flash === 'on' ? '/images/flash-on.png' : '/images/flash-off.png'}}" mode="widthFix"></image>
+      </view>
+      
+      <!-- 倒计时控制 -->
+      <view class="control-icon" bindtap="toggleTimer">
+        <image src="{{timerEnabled ? '/images/timer-on.png' : '/images/timer-off.png'}}" mode="widthFix"></image>
+        <text class="timer-text">{{timerEnabled ? timerSeconds + 's' : ''}}</text>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 底部控制区域 -->
+  <view class="bottom-controls">
+    <!-- 左侧：相册 -->
+    <view class="left-actions">
+      <view class="album-btn" bindtap="openAlbum">
+        <text>相册</text>
+      </view>
+    </view>
+
+    <!-- 右侧：镜头反转 -->
+    <view class="right-actions">
+      <view class="switch-camera" bindtap="switchCamera">
+        <image src="/images/switch-camera.png" mode="widthFix"></image>
+      </view>
+    </view>
+
+    <!-- 快门按钮（绝对居中） -->
+    <view class="shutter-btn" bindtap="takePhoto"></view>
+  </view>
+</view>
