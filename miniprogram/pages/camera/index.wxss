@@ -2,28 +2,23 @@
 .camera-container {
   width: 100%;
   height: 100vh;
-  position: relative;
+  display: flex;
+  flex-direction: column; /* 纵向分栏：上黑区 / 中间取景 / 下黑区 */
   overflow: hidden;
   background-color: #000;
 }
 
 .camera-preview {
   width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
+  flex: 1;            /* 填满上下黑区之间的剩余空间 */
+  background: #000;   /* 防止闪屏时露底 */
 }
 
 /* 顶部控制区域 */
 .top-controls {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 12vh; /* 底部区域的一半高度 */
-  background-color: rgba(0, 0, 0, 0.7);
-  z-index: 10;
+  height: 12vh; /* 顶部固定高度 */
+  background-color: #000; /* 纯黑 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,17 +52,14 @@
 
 /* 底部控制区域 */
 .bottom-controls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
   width: 100%;
-  height: 24vh; /* 顶部区域的两倍高度 */
-  background-color: rgba(0, 0, 0, 0.7);
-  z-index: 10;
+  height: 24vh; /* 底部固定高度 */
+  background-color: #000; /* 纯黑 */
   display: flex;
-  justify-content: space-between; /* 左右两侧对齐，快门绝对居中覆盖 */
+  justify-content: space-between;
   align-items: center;
-  padding: 0 60rpx; /* 左右留边距 */
+  padding: 0 60rpx;
+  position: relative; /* 让快门按钮在底部区域内绝对居中 */
 }
 
 /* 快门按钮（绝对居中到底部黑色区域） */
@@ -84,7 +76,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translateX(-28px);
+  transform: translate(-50%, -50%) translateX(-25px); /* 向左移动 25px */
   z-index: 20;
 }
 
