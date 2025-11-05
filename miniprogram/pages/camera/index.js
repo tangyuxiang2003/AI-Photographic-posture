@@ -67,8 +67,14 @@ Page({
   toggleFlash() {
     // 只有后置摄像头才能使用闪光灯
     if (this.data.cameraPosition === 'back') {
-      this.setData({
-        flash: this.data.flash === 'off' ? 'on' : 'off'
+      const next = this.data.flash === 'off' ? 'on' : 'off';
+      this.setData({ flash: next }, () => {
+        if (next === 'on') {
+          wx.showToast({
+            title: '闪光灯已打开',
+            icon: 'none'
+          });
+        }
       });
     } else {
       wx.showToast({
@@ -90,10 +96,10 @@ Page({
     if (this.data.isTakingPhoto) return;
     
     const ctx = wx.createCameraContext();
+    this.setData({ isTakingPhoto: true });
     
     // 如果开启了倒计时
     if (this.data.timerEnabled) {
-      this.setData({ isTakingPhoto: true });
       let seconds = this.data.timerSeconds;
       
       // 显示倒计时提示
@@ -125,28 +131,44 @@ Page({
 
   // 实际拍照操作
   realTakePhoto(ctx) {
-    ctx.takePhoto({
-      quality: 'high',
-      success: (res) => {
-        // 拍照成功，获取图片临时路径
-        const tempImagePath = res.tempImagePath;
-        
-        // 可以在这里处理图片，比如预览或上传
-        wx.navigateTo({
-          url: `/pages/preview/index?imagePath=${tempImagePath}`
-        });
-      },
-      fail: (err) => {
-        console.error('拍照失败', err);
+    const doTake = () => {
+      ctx.takePhoto({
+        quality: 'high',
+        success: (res) => {
+          // 拍照成功，获取图片临时路径
+          const tempImagePath = res.tempImagePath;
+          
+          // 可以在这里处理图片，比如预览或上传
+          wx.navigateTo({
+            url: `/pages/preview/index?imagePath=${tempImagePath}`
+          });
+        },
+        fail: (err) => {
+          console.error('拍照失败', err);
+          wx.showToast({
+            title: '拍照失败',
+            icon: 'none'
+          });
+        },
+        complete: () => {
+          this.setData({ isTakingPhoto: false });
+        }
+      });
+    };
+
+    // 若为后置且闪光处于打开，先确保属性应用后再拍，提升闪光触发稳定性
+    if (this.data.cameraPosition === 'back' && this.data.flash === 'on') {
+      this.setData({ flash: 'on' });
+      setTimeout(doTake, 120);
+    } else {
+      if (this.data.flash === 'on' && this.data.cameraPosition !== 'back') {
         wx.showToast({
-          title: '拍照失败',
+          title: '前置摄像头无闪光灯',
           icon: 'none'
         });
-      },
-      complete: () => {
-        this.setData({ isTakingPhoto: false });
       }
-    });
+      doTake();
+    }
   },
 
   // 相机错误处理
