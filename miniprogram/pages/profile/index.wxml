@@ -129,14 +129,7 @@
       </view>
       <view class="action-right"><text class="action-arrow">›</text></view>
     </view>
-    <!-- 4. 账号与安全 -->
-    <view class="action-item">
-      <view class="action-left">
-        <image class="action-icon" src="../../images/icons/usercenter.png" mode="aspectFit"></image>
-        <view class="action-text">账号与安全</view>
-      </view>
-      <view class="action-right"><text class="action-arrow">›</text></view>
-    </view>
+
     <!-- 5. 设置中心 -->
     <view class="action-item">
       <view class="action-left">

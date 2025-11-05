@@ -8,8 +8,8 @@
         <image src="{{flash === 'on' ? '/images/flash-on.png' : '/images/flash-off.png'}}" mode="widthFix"></image>
       </view>
       <!-- 倒计时控制 -->
-      <view class="control-icon timer-control" bindtap="toggleTimer">
-        <image src="{{timerEnabled ? '/images/timer-on.png' : '/images/timer-off.png'}}" mode="widthFix"></image>
+      <view class="control-icon timer-control {{timerEnabled ? 'on' : ''}}" bindtap="toggleTimer">
+        <image src="/images/timer-off.png" mode="widthFix"></image>
         <text class="timer-text">{{timerEnabled ? timerSeconds + 's' : ''}}</text>
       </view>
     </view>

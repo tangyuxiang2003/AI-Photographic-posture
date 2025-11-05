@@ -59,6 +59,22 @@
   margin-left: 60px;
 }
 
+/* 倒计时开关的视觉状态：开启时高亮，图片取消灰度 */
+.timer-control image {
+  filter: grayscale(100%);
+}
+
+.timer-control.on {
+  border: 2rpx solid #00e676;
+  border-radius: 50%;
+  padding: 12rpx;
+  box-shadow: 0 0 12rpx rgba(0, 230, 118, 0.6);
+}
+
+.timer-control.on image {
+  filter: none;
+}
+
 /* 底部控制区域 */
 .bottom-controls {
   width: 100%;
