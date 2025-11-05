@@ -28,7 +28,7 @@
   width: 80%;
   height: 80%;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 }
 
@@ -48,6 +48,15 @@
 .timer-text {
   color: white;
   font-size: 24rpx;
+}
+
+/* 顶部控件位置调整 */
+.flash-control {
+  margin-top: 20px;
+}
+.timer-control {
+  margin-top: 20px;
+  margin-left: 60px;
 }
 
 /* 底部控制区域 */
@@ -96,10 +105,10 @@
 
 /* 相册按钮（左侧，圆形且文字居中） */
 .album-btn {
-  width: 60rpx;
-  height: 60rpx;
+  width: 80rpx;
+  height: 80rpx;
   border-radius: 50%;
-  border: 4rpx solid white;
+  border: 6rpx solid white;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,24 +116,25 @@
 
 .album-btn text {
   color: #fff;
-  font-size: 24rpx;
+  font-size: 32rpx;
   line-height: 1;
 }
 
 /* 镜头反转按钮（右侧，圆形且图标居中） */
 .switch-camera {
-  width: 60rpx;
-  height: 60rpx;
+  width: 80rpx;
+  height: 80rpx;
   border-radius: 50%;
-  border: 4rpx solid white;
+  border: 6rpx solid white;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: translateX(-52px); /* 向左移动 52px */
 }
 
 .switch-camera image {
-  width: 36rpx; /* 图标置于圆形按钮中心，适当缩小以留白 */
-  height: 36rpx;
+  width: 40rpx; /* 图标置于圆形按钮中心，适当缩小以留白 */
+  height: 40rpx;
 }
 
 
