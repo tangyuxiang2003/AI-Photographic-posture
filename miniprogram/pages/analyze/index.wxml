@@ -27,7 +27,7 @@
   <view class="refine-card">
     <view class="refine-title">继续优化</view>
     <textarea class="refine-textarea"
-              placeholder="描述你期望的姿势、风格、情绪等（可选）"
+              placeholder="尽可能描述详细 如：风格 情绪 姿势 性别 氛围......"
               bindinput="onRefinedPromptInput"
               value="{{refinedPrompt}}"
               auto-height

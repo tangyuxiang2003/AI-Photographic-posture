@@ -198,6 +198,11 @@ Page({
         this.setData({ profile: { ...mergedUser, hasAuth: true } });
         try { wx.setStorageSync('profile_basic', { ...mergedUser, hasAuth: true }); } catch (e) {}
         wx.showToast({ title: '登录成功', icon: 'success' });
+        
+        // 登录成功后重新加载个人信息
+        setTimeout(() => {
+          this.loadProfile();
+        }, 500);
       })
       .catch((err) => {
         const msg = String(err && err.message || '');

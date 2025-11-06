@@ -51,8 +51,32 @@ Page({
       wx.showShareMenu({ withShareTicket: true });
     }
 
-    // 异步拉取后端收藏
-    this.fetchFavorites();
+    // 使用新的数据同步工具异步拉取后端收藏
+    this.syncFavoritesFromServer();
+  },
+
+  // 使用统一的数据同步工具
+  async syncFavoritesFromServer() {
+    try {
+      const { hasToken } = require('../../utils/storage');
+      if (!hasToken()) {
+        console.log('[photos] 未登录，跳过收藏同步');
+        return;
+      }
+      
+      const { syncFavorites } = require('../../utils/sync');
+      const favorites = await syncFavorites();
+      
+      if (favorites && favorites.length > 0) {
+        const normalized = this.normalizeFavorites(favorites);
+        this.setData({ favorites: normalized }, this.computeFiltered);
+        // 标记用户已收藏过
+        try { wx.setStorageSync('has_favorited_before', true); } catch(_) {}
+      }
+    } catch (err) {
+      console.warn('[photos] 同步收藏失败，使用本地缓存', err);
+      // 失败时保持使用本地缓存
+    }
   },
 
   onShow(){
@@ -67,7 +91,7 @@ Page({
     try {
       const { hasToken } = require('../../utils/storage');
       if (hasToken()) {
-        this.fetchFavorites();
+        this.syncFavoritesFromServer();
       } else {
         // 最多重试 3 次：300ms / 1000ms / 2000ms
         const retry = (ms, left) => {
@@ -76,7 +100,7 @@ Page({
             try {
               const { hasToken } = require('../../utils/storage');
               if (hasToken()) {
-                this.fetchFavorites();
+                this.syncFavoritesFromServer();
               } else {
                 retry(ms * 2, left - 1);
               }

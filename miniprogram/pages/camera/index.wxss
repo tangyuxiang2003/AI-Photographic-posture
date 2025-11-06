@@ -149,7 +149,7 @@
 }
 
 .switch-camera image {
-  width: 40rpx; /* 图标置于圆形按钮中心，适当缩小以留白 */
+  width: 48rpx; /* 图标置于圆形按钮中心，适当缩小以留白 */
   height: 40rpx;
 }
 

@@ -1,4 +1,3 @@
-
 const BASE_URL = 'http://172.20.10.2:8080'; // 开发环境：IP:端口；真机发布需换为 HTTPS 域名
 // 统一读取两个可能的存储键：'auth_token' 与 'token'
 
@@ -40,9 +39,9 @@ Page({
     // 允许从上一页通过 eventChannel 传参并立即启动
     const channel = this.getOpenerEventChannel && this.getOpenerEventChannel();
     if (channel) {
-      channel.on('startAnalyzePayload', ({ localPath, localPaths, desc, userId, token } = {}) => {
+      channel.on('startAnalyzePayload', ({ localPath, localPaths, desc, userId, token, textOnly } = {}) => {
         // 记录从首页携带的 token
-        try { console.log('[analyze] eventChannel payload', { hasLocalPaths: Array.isArray(localPaths) && localPaths.length, hasLocalPath: !!localPath, userId, token }); } catch (_) {}
+        try { console.log('[analyze] eventChannel payload', { hasLocalPaths: Array.isArray(localPaths) && localPaths.length, hasLocalPath: !!localPath, userId, token, textOnly }); } catch (_) {}
         // 若上页携带了 token，则兜底写入两个 key，避免时序导致本地为空
         try {
           if (typeof token === 'string' && token) {
@@ -54,7 +53,11 @@ Page({
             try { console.log('[analyze] header after channel write', headerNow); } catch (_) {}
           }
         } catch (e) { try { console.error('[analyze] write token error', e); } catch(_) {} }
-        if (Array.isArray(localPaths) && localPaths.length) {
+        
+        // 新增：处理纯文字描述模式
+        if (textOnly && desc) {
+          this.startAnalyzeTextOnly(desc, userId);
+        } else if (Array.isArray(localPaths) && localPaths.length) {
           this.startAnalyzeMulti(localPaths, desc, userId);
         } else if (localPath) {
           this.startAnalyze(localPath, desc, userId);
@@ -93,6 +96,80 @@ Page({
         }
       }, 300);
     }
+  },
+
+  // 新增：纯文字描述生成姿势图片
+  startAnalyzeTextOnly(desc, userId) {
+    // CRITICAL: 禁止纯文字生成，必须上传图片
+    wx.showToast({ 
+      title: '请先上传背景照片或人景合照', 
+      icon: 'none',
+      duration: 2000
+    });
+    setTimeout(() => {
+      wx.navigateBack();
+    }, 2000);
+    return;
+
+    const { hasToken } = require('../../utils/storage');
+    if (!hasToken()) {
+      wx.showToast({ title: '请先登录获取Token', icon: 'none' });
+      return;
+    }
+
+    this._resetStatus();
+    this._startFakeProgress();
+
+    // 统一从 storage 获取 userId，若函数参数传入则作为兜底
+    const { getAuth } = require('../../utils/storage');
+    const auth = (getAuth && getAuth()) || {};
+    const uidStore = normalizeUserId(auth.userId);
+    const uidParam = normalizeUserId(userId);
+    const uid = uidStore !== undefined ? uidStore : uidParam;
+
+    this.setData({ lastLocalPath: '', lastLocalPaths: [], lastUserId: uid, lastDesc: desc || '' });
+    
+    const { post } = require('../../utils/request');
+    const body = { content: desc || '' };
+    if (uid !== undefined) body.userId = uid;
+    
+    try { console.log('[analyze] text-only generation', { userId: uid, content: desc }); } catch (_) {}
+    
+    post('/api/image/generate-text', body)
+      .then((res) => {
+        try {
+          if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
+          try { console.log('[analyze] text-only resp', res.statusCode, res.data); } catch (e2) {}
+          
+          // 解析响应数据
+          let responseData = res.data;
+          if (typeof responseData === 'string') {
+            try { responseData = JSON.parse(responseData); } catch(_) {}
+          }
+          
+          const ok = !!responseData && (responseData.code === 0 || responseData.code === 200 || responseData.success === true || responseData.msg === '成功');
+          if (!ok) throw new Error(responseData.msg || '服务错误');
+          
+          const items = Array.isArray(responseData.data) ? responseData.data : [];
+          const images = items.map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+          const aiIdMap = {};
+          items.forEach(i => {
+            const url = i.aiImageUrl || i.imageUrl;
+            const id = i.id || i.aiImageId;
+            if (url && (id != null)) aiIdMap[url] = String(id);
+          });
+          try { console.log('[analyze] text-only images', images, aiIdMap); } catch (e3) {}
+          this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
+        } catch (e) {
+          try { console.error('[analyze] text-only fail', e); } catch (e4) {}
+          this._failout(e && e.message);
+        }
+      })
+      .catch((err) => {
+        try { console.error('[analyze] text-only request error', err); } catch (_) {}
+        this._failout(err && err.message || '生成失败');
+      })
+      .finally(() => this._stopFakeProgress());
   },
 
   // 单文件上传分析
@@ -207,7 +284,7 @@ Page({
         }).catch(reject);
       }));
 
-      // 记录本次批量任务的上下文（保留以便后续“优化描述”复用）
+      // 记录本次批量任务的上下文（保留以便后续"优化描述"复用）
       this.setData({ lastLocalPaths: Array.isArray(localPaths) ? localPaths : [], lastLocalPath: '', lastDesc: desc || '' });
       const results = await Promise.all(tasks);
       // results 是各项返回的 url 数组，但无法拿到 id；这里并行任务里已在每项中解析 body，
@@ -262,7 +339,7 @@ Page({
     const objList = list.map(u => ({ id: this.data.aiIdMap[u], title: 'AI生成图', cover: u, tags: [], type: 'AI' }));
     try { wx.setStorageSync('app_favorites', objList); } catch(_) {}
     this.setData({ favMap });
-    // 记录用户已进行过收藏行为，供收藏页判定“老用户”恢复历史
+    // 记录用户已进行过收藏行为，供收藏页判定"老用户"恢复历史
     try { if (list.length > 0) wx.setStorageSync('has_favorited_before', true); } catch(_) {}
     wx.showToast({ title: willFav ? '已收藏' : '已取消', icon: 'none', duration: 800 });
 
@@ -315,7 +392,7 @@ Page({
     const formBase = { content: prompt };
     if (uid !== undefined) formBase.userId = uid;
 
-    const { upload } = require('../../utils/request');
+    const { upload, post } = require('../../utils/request');
     const lastPaths = Array.isArray(this.data.lastLocalPaths) ? this.data.lastLocalPaths : [];
     const lastPath = this.data.lastLocalPath;
 
@@ -365,8 +442,27 @@ Page({
         });
         this.setData({ aiIdMap: map });
       } else {
-        wx.showToast({ title: '没有可复用的原图', icon: 'none' });
-        return;
+        // 纯文字优化：调用纯文字生成接口
+        const res = await post('/api/image/generate-text', formBase);
+        if (res.statusCode === 401 || res.statusCode === 403) throw new Error('未授权或登录过期');
+        
+        let responseData = res.data;
+        if (typeof responseData === 'string') {
+          try { responseData = JSON.parse(responseData); } catch(_) {}
+        }
+        
+        const ok = !!responseData && (responseData.code === 0 || responseData.code === 200 || responseData.success === true || responseData.msg === '成功');
+        if (!ok) throw new Error(responseData.msg || '服务错误');
+        
+        const items = Array.isArray(responseData.data) ? responseData.data : [];
+        newImages = items.map(i => i.aiImageUrl || i.imageUrl).filter(Boolean);
+        const map = Object.assign({}, this.data.aiIdMap || {});
+        items.forEach(i => {
+          const url = i.aiImageUrl || i.imageUrl;
+          const id = i.id || i.aiImageId;
+          if (url && (id != null)) map[url] = String(id);
+        });
+        this.setData({ aiIdMap: map });
       }
 
       // 追加而非覆盖，保留原图

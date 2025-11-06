@@ -261,6 +261,19 @@ async function authorizeLogin(externalUserInfo) {
       try { saveAuth({ token: tokenFrom, userId: userIdFrom }); } catch (e) {}
     }
   } catch (e) {}
+  
+  // 登录成功后同步用户数据
+  try {
+    const { syncAll } = require('./sync');
+    syncAll().then(summary => {
+      console.log('[auth] 登录后数据同步完成:', summary);
+    }).catch(err => {
+      console.warn('[auth] 登录后数据同步失败:', err);
+    });
+  } catch (e) {
+    console.warn('[auth] 数据同步模块加载失败:', e);
+  }
+  
   return { mergedUser, token: (resp && (resp.token || (resp.data && resp.data.token))) || '' };
 }
 

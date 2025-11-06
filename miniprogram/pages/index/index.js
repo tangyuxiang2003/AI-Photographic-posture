@@ -153,6 +153,9 @@ Page({
           authBypassed: false
         });
         wx.showToast({ title: '登录成功', icon: 'success' });
+        
+        // 登录成功后刷新统计数据
+        this.updateStatsFromLocal();
       })
       .catch((err) => {
         if (String(err && err.message).includes('USER_CANCEL_EXPLAIN')) {
@@ -306,6 +309,18 @@ Page({
     const prompt = (this.data.expectDesc || '').trim()
     const list = this.normalize(this.data.previewPaths)
     const inputs = list.map(it => it.src).filter(Boolean)
+    
+    // CRITICAL: 必须上传图片才能进行分析
+    if (!inputs.length) {
+      wx.showToast({ 
+        title: '请先上传背景照片或人景合照', 
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+    
+    // 至少需要描述或图片之一
     if (!prompt && !inputs.length) {
       wx.showToast({ title: '请先填写描述或选择图片', icon: 'none' })
       return
@@ -345,7 +360,9 @@ Page({
             // 可选：如果有用户ID就传，没有则留空字符串
             userId: (this.data.profile && this.data.profile.userId) ? String(this.data.profile.userId) : '',
             // 附带 token，分析页兜底使用
-            token: tk
+            token: tk,
+            // 新增：标记是否为纯文字描述模式
+            textOnly: inputs.length === 0 && !!prompt
           });
         }
       }
