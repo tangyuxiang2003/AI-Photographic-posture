@@ -160,6 +160,8 @@ Page({
           });
           try { console.log('[analyze] text-only images', images, aiIdMap); } catch (e3) {}
           this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
+          // 保存生成的图片到本地存储供相机页面使用
+          try { wx.setStorageSync('generated_images', images); } catch(_) {}
         } catch (e) {
           try { console.error('[analyze] text-only fail', e); } catch (e4) {}
           this._failout(e && e.message);
@@ -220,6 +222,8 @@ Page({
         });
         try { console.log('[analyze] images(single)', images, aiIdMap); } catch (e3) {}
         this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
+        // 保存生成的图片到本地存储供相机页面使用
+        try { wx.setStorageSync('generated_images', images); } catch(_) {}
       } catch (e) {
         try { console.error('[analyze] fail(single)', e); } catch (e4) {}
         this._failout(e && e.message);
@@ -295,6 +299,8 @@ Page({
       // 如果后端在多文件返回中也包含 id，需要在每个 then 中构造 {arr, map}，此处合并 map。
       try { console.log('[analyze] images(multi merged)', images, aiIdMap); } catch (e6) {}
       this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
+      // 保存生成的图片到本地存储供相机页面使用
+      try { wx.setStorageSync('generated_images', images); } catch(_) {}
     } catch (e) {
       console.error(e);
       this._failout(e && e.message);
@@ -474,6 +480,8 @@ Page({
         refinedPrompt: '',
         feedbackText: this._genFeedback(true)
       });
+      // 保存生成的图片到本地存储供相机页面使用
+      try { wx.setStorageSync('generated_images', merged); } catch(_) {}
       wx.showToast({ title: '已生成新图片', icon: 'success' });
     } catch (e) {
       try { console.error('[analyze] refine regenerate error', e); } catch(_) {}

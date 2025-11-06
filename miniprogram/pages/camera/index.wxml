@@ -1,5 +1,5 @@
 <!-- camera.wxml -->
-<view class="camera-container">
+<view class="camera-container" bindtap="onScreenTap">
   <!-- 顶部黑色功能区 -->
   <view class="top-controls">
     <view class="top-controls-inner">
@@ -23,23 +23,36 @@
     binderror="onCameraError"
   ></camera>
 
+  <!-- 放大的参考图（显示在左下角黑色区域上方） -->
+  <view class="enlarged-reference {{enlargedImage ? 'show' : ''}}" wx:if="{{enlargedImage}}" catchtap="onCloseEnlarged">
+    <image src="{{enlargedImage}}" mode="aspectFit"></image>
+  </view>
+
   <!-- 底部黑色功能区 -->
-  <view class="bottom-controls">
-    <!-- 左侧：相册 -->
-    <view class="left-actions">
+  <view class="bottom-controls" catchtap="stopPropagation">
+    <!-- 生成图片缩略图列表（横向滚动） -->
+    <view class="thumbnail-list" wx:if="{{generatedImages.length > 0}}">
+      <scroll-view scroll-x="true" class="thumbnail-scroll">
+        <view class="thumbnail-item" wx:for="{{generatedImages}}" wx:key="index" bindtap="onThumbnailTap" data-url="{{item}}" catchtap="stopPropagation">
+          <image src="{{item}}" mode="aspectFill"></image>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 按钮行：相册、快门、反转 -->
+    <view class="button-row">
+      <!-- 相册按钮 -->
       <view class="album-btn" bindtap="openAlbum">
         <text>相册</text>
       </view>
-    </view>
 
-    <!-- 右侧：镜头反转 -->
-    <view class="right-actions">
+      <!-- 快门按钮 -->
+      <view class="shutter-btn" bindtap="takePhoto"></view>
+
+      <!-- 镜头反转按钮 -->
       <view class="switch-camera" bindtap="switchCamera">
         <image src="/images/switch-camera.png" mode="widthFix"></image>
       </view>
     </view>
-
-    <!-- 快门按钮（居中到底部黑区内） -->
-    <view class="shutter-btn" bindtap="takePhoto"></view>
   </view>
 </view>

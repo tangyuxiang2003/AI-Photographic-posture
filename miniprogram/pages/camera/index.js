@@ -6,7 +6,9 @@ Page({
     timerEnabled: false, // 倒计时默认关闭
     timerSeconds: 3, // 倒计时秒数
     countdown: null, // 倒计时计时器
-    isTakingPhoto: false // 是否正在拍照
+    isTakingPhoto: false, // 是否正在拍照
+    generatedImages: [], // 生成的图片列表
+    enlargedImage: '' // 当前放大显示的图片
   },
 
   onLoad() {
@@ -31,6 +33,49 @@ Page({
         console.log('闪光灯权限已获取');
       }
     });
+
+    // 加载生成的图片
+    this.loadGeneratedImages();
+  },
+
+  onShow() {
+    // 每次显示页面时重新加载图片
+    this.loadGeneratedImages();
+  },
+
+  // 加载生成的图片
+  loadGeneratedImages() {
+    try {
+      const images = wx.getStorageSync('generated_images') || [];
+      this.setData({ generatedImages: Array.isArray(images) ? images : [] });
+    } catch (e) {
+      console.error('加载生成图片失败', e);
+    }
+  },
+
+  // 点击缩略图
+  onThumbnailTap(e) {
+    const url = e.currentTarget.dataset.url;
+    if (url) {
+      this.setData({ enlargedImage: url });
+    }
+  },
+
+  // 点击屏幕收起放大图片
+  onScreenTap() {
+    if (this.data.enlargedImage) {
+      this.setData({ enlargedImage: '' });
+    }
+  },
+
+  // 关闭放大图片
+  onCloseEnlarged() {
+    this.setData({ enlargedImage: '' });
+  },
+
+  // 阻止事件冒泡
+  stopPropagation() {
+    // 空函数，用于阻止事件冒泡
   },
 
   // 切换摄像头
