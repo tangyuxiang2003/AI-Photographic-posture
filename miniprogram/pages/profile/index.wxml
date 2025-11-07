@@ -44,18 +44,18 @@
     </view>
   </view>
 
-  <!-- 统计卡片（静态） -->
+  <!-- 统计卡片 -->
   <view class="stats-card">
     <view class="stat-item">
-      <view class="stat-num">0</view>
+      <view class="stat-num">{{stats.photos}}</view>
       <view class="stat-label">照片</view>
     </view>
     <view class="stat-item">
-      <view class="stat-num">0</view>
+      <view class="stat-num">{{stats.favorites}}</view>
       <view class="stat-label">收藏</view>
     </view>
     <view class="stat-item">
-      <view class="stat-num">0</view>
+      <view class="stat-num">{{stats.following}}</view>
       <view class="stat-label">关注</view>
     </view>
   </view>
@@ -113,14 +113,7 @@
       </view>
       <view class="action-right"><text class="action-arrow">›</text></view>
     </view>
-    <!-- 2. 浏览历史 -->
-    <view class="action-item">
-      <view class="action-left">
-        <image class="action-icon" src="../../images/icons/examples.png" mode="aspectFit"></image>
-        <view class="action-text">浏览历史</view>
-      </view>
-      <view class="action-right"><text class="action-arrow">›</text></view>
-    </view>
+
     <!-- 3. 用户建议（原“给你一点儿建议”） -->
     <view class="action-item" bindtap="onTapSuggestions">
       <view class="action-left">

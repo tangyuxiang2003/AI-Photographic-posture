@@ -5,11 +5,30 @@ Page({
       nickName: '未登录',
       hasAuth: false
     },
+    // 统计数据
+    stats: {
+      photos: 0,
+      favorites: 0,
+      following: 0
+    },
     // 临时收集的用户资料（chooseAvatar + nickname）
     tempAvatarUrl: '',
     tempNickName: '',
     themeBg: '#FFF7FA',
-    palette: ['#FFF7FA', '#FFEFEF', '#FFF6E5', '#E8F7FF', '#F3F0FF', '#EFFFF3', '#FDEEEF', '#F5F5F5'],
+    palette: [
+      '#FFF7FA', // 浅粉红
+    
+      '#E8F7FF', // 浅蓝色
+      '#F3F0FF', // 淡紫色
+      '#EFFFF3', // 薄荷绿
+      '#F5F5F5', // 浅灰色
+      '#FFFACD', // 柠檬黄
+      '#E0F2F7', // 天蓝色
+      '#FCE4EC', // 樱花粉
+      '#E8EAF6', // 靛蓝浅
+      
+      '#FFF9E6'  // 象牙白
+    ],
     themeEnabled: true,
     switchOnColor: '#07C160',
     tipsEnabled: true,
@@ -24,10 +43,13 @@ Page({
 
   onLoad() {
     this.loadProfile();
+    this.loadStats();
     this.initThemeColor();
   },
+  
   onShow() {
     this.loadProfile();
+    this.loadStats();
     // 确保返回页面时主题一致
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
@@ -57,6 +79,31 @@ Page({
         });
       }
     } catch (e) {}
+  },
+
+  // 加载统计数据
+  loadStats() {
+    try {
+      // 从本地存储读取收藏数量
+      const favorites = wx.getStorageSync('app_favorites') || [];
+      const favCount = Array.isArray(favorites) ? favorites.length : 0;
+      
+      // 从本地存储读取照片数量（如果有的话）
+      const photos = wx.getStorageSync('generated_images') || [];
+      const photoCount = Array.isArray(photos) ? photos.length : 0;
+      
+      this.setData({
+        stats: {
+          photos: photoCount,
+          favorites: favCount,
+          following: 0
+        }
+      });
+      
+      console.log('[profile] 统计数据加载:', { photos: photoCount, favorites: favCount });
+    } catch (e) {
+      console.error('[profile] 加载统计数据失败:', e);
+    }
   },
 
   // 主题背景初始化
@@ -199,9 +246,10 @@ Page({
         try { wx.setStorageSync('profile_basic', { ...mergedUser, hasAuth: true }); } catch (e) {}
         wx.showToast({ title: '登录成功', icon: 'success' });
         
-        // 登录成功后重新加载个人信息
+        // 登录成功后重新加载个人信息和统计数据
         setTimeout(() => {
           this.loadProfile();
+          this.loadStats();
         }, 500);
       })
       .catch((err) => {

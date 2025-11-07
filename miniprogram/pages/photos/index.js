@@ -3,7 +3,6 @@ Page({
     // 全局主题背景色
     themeBg: '#FFF7FA',
     query: '',
-    activeTab: '全部',
     favorites: [],
     filtered: [],
     // 标签编辑
@@ -98,9 +97,17 @@ Page({
     return yiq >= 160 ? '#000000' : '#ffffff';
   },
 
-  onSetTab(e){
-    const tab = e.currentTarget.dataset.tab
-    this.setData({ activeTab: tab }, this.computeFiltered)
+  onPreviewImage(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    
+    // 获取所有收藏图片的 URL 列表
+    const urls = this.data.filtered.map(item => item.cover).filter(Boolean);
+    
+    wx.previewImage({
+      current: url,
+      urls: urls
+    });
   },
 
   onSearchInput(e){
@@ -133,25 +140,67 @@ Page({
     this.setData({ editingTags: e.detail.value || '' });
   },
 
-  // 保存标签（仅更新本地显示，不调用后端）
-  onSaveTags(){
+  // 保存标签（调用后端接口）
+  async onSaveTags(){
     const id = this.data.editingId;
     if (!id) return this.onCloseTagEditor();
 
     const raw = (this.data.editingTags || '');
-    const tags = raw
-      .split(/[,，\s]+/)
-      .map(s => s.trim())
-      .filter(Boolean);
+    const tag = raw.trim();
 
-    // 更新内存中的数据
-    const prev = this.data.favorites.slice();
-    const next = prev.map(it => it.id === id ? { ...it, tags } : it);
-    const normalized = this.normalizeFavorites(next);
-    this.setData({ favorites: normalized }, this.computeFiltered);
+    if (!tag) {
+      wx.showToast({ title: '请输入标签内容', icon: 'none' });
+      return;
+    }
 
-    this.onCloseTagEditor();
-    wx.showToast({ title: '已保存风格标签', icon: 'none' });
+    // 检查登录状态
+    try {
+      const { hasToken } = require('../../utils/storage');
+      if (!hasToken || !hasToken()) {
+        wx.showToast({ title: '请先登录', icon: 'none' });
+        return;
+      }
+    } catch (e) {
+      console.error('检查登录状态失败', e);
+    }
+
+    try {
+      wx.showLoading({ title: '保存中...', mask: true });
+      
+      const { post } = require('../../utils/request');
+      // 调用后端接口更新标签（request.js 会自动携带 token 和 userId）
+      const response = await post('/api/collection/updateTag', { 
+        id: String(id), 
+        tag: tag 
+      });
+
+      console.log('[photos] 更新标签响应:', response);
+
+      // 更新成功后，更新本地数据
+      const tags = tag
+        .split(/[,，\s]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const prev = this.data.favorites.slice();
+      const next = prev.map(it => it.id === id ? { ...it, tags } : it);
+      const normalized = this.normalizeFavorites(next);
+      this.setData({ favorites: normalized }, this.computeFiltered);
+
+      this.onCloseTagEditor();
+      wx.showToast({ title: '标签保存成功', icon: 'success' });
+    } catch (err) {
+      console.error('保存标签失败', err);
+      
+      // 处理 401/403 错误
+      if (err.statusCode === 401 || err.statusCode === 403) {
+        wx.showToast({ title: '登录已过期，请重新登录', icon: 'none' });
+      } else {
+        wx.showToast({ title: '保存失败，请稍后重试', icon: 'none' });
+      }
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   onCloseTagEditor(){
@@ -159,14 +208,12 @@ Page({
   },
 
   computeFiltered(){
-    const { favorites, activeTab, query } = this.data
+    const { favorites, query } = this.data
     const q = (query || '').trim().toLowerCase()
     const list = (favorites || []).filter(it => {
-      const tags = Array.isArray(it?.tags) ? it.tags : []
-      const okTab = activeTab === '全部' ? true : (it?.type === activeTab || tags.includes(activeTab))
-      const text = it?.searchText || (((it?.title || '') + ' ' + tags.join(' ')).toLowerCase())
-      const okQuery = q ? text.includes(q) : true
-      return okTab && okQuery
+      if (!q) return true;
+      const text = it?.searchText || (((it?.title || '') + ' ' + (Array.isArray(it?.tags) ? it.tags.join(' ') : '')).toLowerCase())
+      return text.includes(q)
     })
     this.setData({ filtered: list })
   },
@@ -198,7 +245,18 @@ Page({
     try {
       wx.showLoading({ title: '删除中...', mask: true });
       const { post } = require('../../utils/request');
-      await post('/api/collection/remove', { aiImageId: id, userId });
+      
+      // 获取当前收藏项的 aiImageId
+      const item = this.data.favorites.find(x => x.id === id);
+      const aiImageId = item?.aiImageId;
+      
+      if (!aiImageId) {
+        wx.showToast({ title: '数据异常，请刷新后重试', icon: 'none' });
+        return;
+      }
+      
+      // 使用 aiImageId 调用删除接口
+      await post('/api/collection/remove', { aiImageId, userId });
       
       // 删除成功后重新从后端加载列表
       await this.fetchFavorites();
@@ -269,10 +327,11 @@ Page({
         console.log('[photos] 第一条数据示例:', base[0]);
       }
       
-      // 规范化字段：id 用 aiImageId；cover 用 aiImageUrl；保留 collectTime
+      // 规范化字段：保留收藏记录的 id（collection 表主键）和 aiImageId
       const normalized = this.normalizeFavorites(base.map(x => {
         const item = {
-          id: x.aiImageId || x.id,
+          id: x.id,  // 收藏记录的主键 ID
+          aiImageId: x.aiImageId,  // AI 图片 ID
           title: x.title || 'AI生成图',
           cover: x.aiImageUrl || x.imageUrl || x.cover || x.url,
           tags: Array.isArray(x.tags) ? x.tags : [],
