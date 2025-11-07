@@ -8,7 +8,7 @@
  */
 const { getAuth, saveAuth } = require('./storage');
 
-const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://你的域名
+const BASE_URL = 'http://192.168.43.179:8080'; // 如需 HTTPS，请改为 https://你的域名
 
 // 统一清理本地登录态（token/auth_token 以及持久化的 auth）
 function clearAuthTokens() {
@@ -42,13 +42,15 @@ function request({ url, method = 'GET', data = {}, headers = {}, timeout }) {
   let finalUrl = url;
   let finalData = data || {};
   if (m === 'GET' || m === 'DELETE') {
-    // 拼到 query
-    const query = new URLSearchParams(
-      Object.entries({ ...finalData, userId }).reduce((acc, [k, v]) => {
-        if (v !== undefined && v !== null && String(v) !== '') acc[k] = String(v);
-        return acc;
-      }, {})
-    ).toString();
+    // 拼到 query（手动实现，兼容小程序环境）
+    const params = { ...finalData, userId };
+    const queryPairs = [];
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null && String(v) !== '') {
+        queryPairs.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+      }
+    }
+    const query = queryPairs.join('&');
     finalUrl = query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url;
     finalData = undefined;
   } else {

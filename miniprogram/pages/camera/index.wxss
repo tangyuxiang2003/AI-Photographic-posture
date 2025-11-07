@@ -12,6 +12,7 @@
   width: 100%;
   flex: 1;            /* 填满上下黑区之间的剩余空间 */
   background: #000;   /* 防止闪屏时露底 */
+  position: relative; /* 为九宫格提供定位参考 */
 }
 
 /* 顶部控制区域 */
@@ -203,18 +204,18 @@
 .enlarged-reference {
   position: absolute;
   left: 30rpx;
-  bottom: calc(24vh - 70px + 145rpx); /* 在缩略图列表上方，考虑底部区域高度减少70px */
-  width: 300rpx;
-  height: 400rpx;
+  bottom: calc(24vh - 70px + 15rpx + 70px); /* 向上移动70px */
+  width: 220rpx; /* 缩略图的2.2倍大小 */
+  height: 220rpx;
   background: rgba(0, 0, 0, 0.8);
   border-radius: 16rpx;
-  border: 4rpx solid #00e676;
+  border: 4rpx solid #ffffff;
   overflow: hidden;
   z-index: 100;
   opacity: 0;
   transform: scale(0.8);
   transition: all 0.3s ease;
-  box-shadow: 0 8rpx 32rpx rgba(0, 230, 118, 0.4);
+  box-shadow: 0 8rpx 32rpx rgba(255, 255, 255, 0.3);
 }
 
 .enlarged-reference.show {
@@ -225,6 +226,35 @@
 .enlarged-reference image {
   width: 100%;
   height: 100%;
+}
+
+/* 九宫格辅助线 */
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* 不阻挡点击事件 */
+  z-index: 50; /* 在相机上方，但在放大图下方 */
+}
+
+.grid-line {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+.grid-line-v {
+  width: 1px;
+  height: 100%;
+  top: 0;
+}
+
+.grid-line-h {
+  height: 1px;
+  width: 100%;
+  left: 0;
 }
 
 

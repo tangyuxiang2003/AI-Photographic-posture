@@ -16,16 +16,26 @@
   </view>
 
   <!-- 中间取景区域（被上下黑区包围） -->
-  <camera 
-    class="camera-preview" 
-    device-position="{{cameraPosition}}" 
-    flash="{{flash}}"
-    binderror="onCameraError"
-  ></camera>
+  <view class="camera-preview">
+    <camera 
+      style="width: 100%; height: 100%;"
+      device-position="{{cameraPosition}}" 
+      flash="{{flash}}"
+      binderror="onCameraError"
+    ></camera>
+    
+    <!-- 九宫格辅助线 -->
+    <view class="grid-overlay">
+      <view class="grid-line grid-line-v" style="left: 33.33%;"></view>
+      <view class="grid-line grid-line-v" style="left: 66.66%;"></view>
+      <view class="grid-line grid-line-h" style="top: 33.33%;"></view>
+      <view class="grid-line grid-line-h" style="top: 66.66%;"></view>
+    </view>
+  </view>
 
   <!-- 放大的参考图（显示在左下角黑色区域上方） -->
   <view class="enlarged-reference {{enlargedImage ? 'show' : ''}}" wx:if="{{enlargedImage}}" catchtap="onCloseEnlarged">
-    <image src="{{enlargedImage}}" mode="aspectFit"></image>
+    <image src="{{enlargedImage}}" mode="aspectFill"></image>
   </view>
 
   <!-- 底部黑色功能区 -->
@@ -33,7 +43,7 @@
     <!-- 生成图片缩略图列表（横向滚动） -->
     <view class="thumbnail-list" wx:if="{{generatedImages.length > 0}}">
       <scroll-view scroll-x="true" class="thumbnail-scroll">
-        <view class="thumbnail-item" wx:for="{{generatedImages}}" wx:key="index" bindtap="onThumbnailTap" data-url="{{item}}" catchtap="stopPropagation">
+        <view class="thumbnail-item" wx:for="{{generatedImages}}" wx:key="index" bindtap="onThumbnailTap" data-url="{{item}}">
           <image src="{{item}}" mode="aspectFill"></image>
         </view>
       </scroll-view>

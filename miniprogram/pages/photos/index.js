@@ -28,55 +28,14 @@ Page({
       this.applyThemeColor(bg);
     } catch (e) {}
 
-    // 先读本地缓存回显（仅对“使用过且收藏过”的用户），再请求后端刷新
-    try {
-      const used = !!wx.getStorageSync('has_favorited_before');
-      if (used) {
-        const cached = wx.getStorageSync('app_favorites');
-        const base = Array.isArray(cached) && cached.length ? cached : [];
-        const normalized = this.normalizeFavorites(base);
-        this.setData({ favorites: normalized }, () => {
-          this.computeFiltered();
-          wx.showShareMenu({ withShareTicket: true });
-        });
-      } else {
-        // 新用户：不显示任何项目缓存的照片
-        this.setData({ favorites: [] }, () => {
-          this.computeFiltered();
-          wx.showShareMenu({ withShareTicket: true });
-        });
-      }
-    } catch(_) {
-      this.computeFiltered();
+    // 显示加载提示
+    wx.showLoading({ title: '加载中...', mask: true });
+    
+    // 直接从后端加载收藏列表
+    this.fetchFavorites().finally(() => {
+      wx.hideLoading();
       wx.showShareMenu({ withShareTicket: true });
-    }
-
-    // 使用新的数据同步工具异步拉取后端收藏
-    this.syncFavoritesFromServer();
-  },
-
-  // 使用统一的数据同步工具
-  async syncFavoritesFromServer() {
-    try {
-      const { hasToken } = require('../../utils/storage');
-      if (!hasToken()) {
-        console.log('[photos] 未登录，跳过收藏同步');
-        return;
-      }
-      
-      const { syncFavorites } = require('../../utils/sync');
-      const favorites = await syncFavorites();
-      
-      if (favorites && favorites.length > 0) {
-        const normalized = this.normalizeFavorites(favorites);
-        this.setData({ favorites: normalized }, this.computeFiltered);
-        // 标记用户已收藏过
-        try { wx.setStorageSync('has_favorited_before', true); } catch(_) {}
-      }
-    } catch (err) {
-      console.warn('[photos] 同步收藏失败，使用本地缓存', err);
-      // 失败时保持使用本地缓存
-    }
+    });
   },
 
   onShow(){
@@ -87,29 +46,8 @@ Page({
       this.applyThemeColor(bg);
     } catch (e) {}
 
-    // 若有 token，进入页面时刷新一次收藏列表；否则延迟重试
-    try {
-      const { hasToken } = require('../../utils/storage');
-      if (hasToken()) {
-        this.syncFavoritesFromServer();
-      } else {
-        // 最多重试 3 次：300ms / 1000ms / 2000ms
-        const retry = (ms, left) => {
-          if (left <= 0) return;
-          setTimeout(() => {
-            try {
-              const { hasToken } = require('../../utils/storage');
-              if (hasToken()) {
-                this.syncFavoritesFromServer();
-              } else {
-                retry(ms * 2, left - 1);
-              }
-            } catch(_) {}
-          }, ms);
-        };
-        retry(300, 3);
-      }
-    } catch(_) {}
+    // 每次显示页面时从后端刷新收藏列表
+    this.fetchFavorites();
   },
 
   // 应用主题背景到导航栏、页面与底部tabBar
@@ -195,7 +133,7 @@ Page({
     this.setData({ editingTags: e.detail.value || '' });
   },
 
-  // 保存标签到本地
+  // 保存标签（仅更新本地显示，不调用后端）
   onSaveTags(){
     const id = this.data.editingId;
     if (!id) return this.onCloseTagEditor();
@@ -206,20 +144,11 @@ Page({
       .map(s => s.trim())
       .filter(Boolean);
 
-    try {
-      const fav = require('../../utils/favorites');
-      fav.setPhotoTags(id, tags);
-      // 读取本地并规范化后刷新（包含 searchText）
-      const list = fav.getAll();
-      const normalized = this.normalizeFavorites(list);
-      this.setData({ favorites: normalized }, this.computeFiltered);
-    } catch(_) {
-      // 回退到内存更新
-      const prev = this.data.favorites.slice();
-      const next = prev.map(it => it.id === id ? { ...it, tags } : it);
-      try { wx.setStorageSync('app_favorites', next) } catch(_) {}
-      this.setData({ favorites: this.normalizeFavorites(next) }, this.computeFiltered);
-    }
+    // 更新内存中的数据
+    const prev = this.data.favorites.slice();
+    const next = prev.map(it => it.id === id ? { ...it, tags } : it);
+    const normalized = this.normalizeFavorites(next);
+    this.setData({ favorites: normalized }, this.computeFiltered);
 
     this.onCloseTagEditor();
     wx.showToast({ title: '已保存风格标签', icon: 'none' });
@@ -242,17 +171,10 @@ Page({
     this.setData({ filtered: list })
   },
 
-  // 取消收藏（优先本地；有登录再调用后端）
+  // 取消收藏（调用后端接口）
   async onToggleFavorite(e){
     const id = e.currentTarget.dataset.id;
     if (!id) return;
-
-    const prev = this.data.favorites.slice();
-    const next = prev.filter(it => it.id !== id);
-
-    // 本地更新 UI 和缓存
-    try { wx.setStorageSync('app_favorites', next) } catch(_) {}
-    this.setData({ favorites: next }, this.computeFiltered);
 
     // 判断是否需要调用后端
     let userId;
@@ -268,20 +190,24 @@ Page({
     } catch(_) {}
 
     if (!canCallServer) {
-      wx.showToast({ title: '已取消收藏', icon: 'none' });
+      wx.showToast({ title: '请先登录', icon: 'none' });
       return;
     }
 
-    // 有 token 才调用后端
+    // 调用后端删除收藏
     try {
+      wx.showLoading({ title: '删除中...', mask: true });
       const { post } = require('../../utils/request');
       await post('/api/collection/remove', { aiImageId: id, userId });
+      
+      // 删除成功后重新从后端加载列表
+      await this.fetchFavorites();
       wx.showToast({ title: '已取消收藏', icon: 'none' });
     } catch (err) {
-      // 回滚
-      try { wx.setStorageSync('app_favorites', prev) } catch(_) {}
-      this.setData({ favorites: prev }, this.computeFiltered);
+      console.error('取消收藏失败', err);
       wx.showToast({ title: '取消失败，请稍后重试', icon: 'none' });
+    } finally {
+      wx.hideLoading();
     }
   },
 
@@ -303,36 +229,58 @@ Page({
   async fetchFavorites() {
     try {
       const { hasToken, getAuth } = require('../../utils/storage');
-      if (!hasToken()) return;
+      if (!hasToken()) {
+        console.log('[photos] 未登录，无法加载收藏列表');
+        this.setData({ favorites: [], filtered: [] });
+        return;
+      }
+      
       const auth = (getAuth && getAuth()) || {};
       const uidNum = Number(auth.userId);
       const userId = Number.isFinite(uidNum) ? String(Math.trunc(uidNum)) : undefined;
 
+      if (!userId) {
+        console.warn('[photos] userId 无效');
+        this.setData({ favorites: [], filtered: [] });
+        return;
+      }
+
       const { get } = require('../../utils/request');
-      // 后端为 GET /api/collection/list，这里改为 GET 并通过 query 传参
+      // 后端为 GET /api/collection/list，通过 query 传参
       const resp = await get('/api/collection/list', { userId });
-      const items = resp?.data?.items || resp?.data || [];
+      const items = resp?.data || [];
       const base = Array.isArray(items) ? items : [];
-      // 规范化字段：id 用 aiImageId；cover 用 imageUrl
+      
+      console.log('[photos] 从后端加载收藏列表，数量:', base.length);
+      
+      // 规范化字段：id 用 aiImageId；cover 用 aiImageUrl；保留 collectTime
       const normalized = this.normalizeFavorites(base.map(x => ({
         id: x.aiImageId || x.id,
         title: x.title || 'AI生成图',
-        cover: x.imageUrl || x.cover || x.url,
+        cover: x.aiImageUrl || x.imageUrl || x.cover || x.url,
         tags: Array.isArray(x.tags) ? x.tags : [],
-        type: x.type || 'AI'
+        type: x.type || 'AI',
+        collectTime: x.collectTime || new Date().toISOString()
       })));
-      try { wx.setStorageSync('app_favorites', normalized) } catch(_) {}
-      // 老用户：若后端返回存在收藏，标记为已收藏过
-      if (normalized.length > 0) { try { wx.setStorageSync('has_favorited_before', true) } catch(_) {} }
+      
+      // 按收藏时间倒序排序（最新的在最上方）
+      normalized.sort((a, b) => {
+        const timeA = new Date(a.collectTime).getTime();
+        const timeB = new Date(b.collectTime).getTime();
+        return timeB - timeA; // 倒序
+      });
+      
       this.setData({ favorites: normalized }, this.computeFiltered);
     } catch (e) {
-      try { console.warn('[photos] fetchFavorites failed', e) } catch(_) {}
+      console.error('[photos] fetchFavorites failed', e);
+      wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' });
+      this.setData({ favorites: [], filtered: [] });
     }
   },
 
   // 微信分享给好友/群聊
   onShareAppMessage(options){
-    // 来自页面内“分享”按钮
+    // 来自页面内"分享"按钮
     if (options && options.from === 'button' && options.target && options.target.dataset) {
       const id = options.target.dataset.id
       const item = (this.data.favorites || []).find(x => x.id === id) || {}

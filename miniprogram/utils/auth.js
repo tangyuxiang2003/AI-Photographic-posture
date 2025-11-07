@@ -4,7 +4,7 @@ const getBaseUrl = () => {
     const v = wx.getStorageSync('api_base');
     if (v && typeof v === 'string') return v;
   } catch (e) {}
-  return 'http://172.20.10.2:8080';
+  return 'http://192.168.43.179:8080';
 };
 
 // axios 适配器（微信小程序环境），若依赖存在则使用 axios，否则回退到 wx.request

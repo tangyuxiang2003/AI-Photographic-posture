@@ -1,4 +1,4 @@
-const BASE_URL = 'http://172.20.10.2:8080'; // 开发环境：IP:端口；真机发布需换为 HTTPS 域名
+const BASE_URL = 'http://192.168.43.179:8080'; // 开发环境：IP:端口；真机发布需换为 HTTPS 域名
 // 统一读取两个可能的存储键：'auth_token' 与 'token'
 
 function getAuthHeader() {
