@@ -225,8 +225,7 @@ async function authorizeLogin(externalUserInfo) {
   let resp;
   try {
     resp = await requestLogin({ loginCode, userInfoCode, userInfo });
-
-    console.log(111111, resp)
+    console.log('[auth] 登录响应完整数据:', JSON.stringify(resp, null, 2));
   } catch (e) {
     // 403 时刷新 code 重试一次
     const msg = String((e && e.message) || e || '');
@@ -244,34 +243,62 @@ async function authorizeLogin(externalUserInfo) {
   }
   const mergedUser = persistAndSync(resp.user, userInfo);
   // 统一抽取 token 与 userId 并保存
+  let finalToken = '';
+  let finalUserId = undefined;
   try {
-    const tokenFrom =
+    // 尝试多种可能的 token 位置
+    finalToken =
       (resp && resp.data && resp.data.token) ||
       (resp && resp.user && resp.user.token) ||
-      resp.token || '';
-    const userIdFrom =
+      (resp && resp.token) || '';
+    
+    // 尝试多种可能的 userId 位置
+    finalUserId =
       (resp && resp.user && (resp.user.id || resp.user.userId)) ||
-      (resp && resp.data && resp.data.userId) ||
-      resp.userId || undefined;
-    if (tokenFrom) {
-      wx.setStorageSync('auth_token', tokenFrom);
-      wx.setStorageSync('token', tokenFrom);
-    }
-    if (tokenFrom || userIdFrom) {
-      try { saveAuth({ token: tokenFrom, userId: userIdFrom }); } catch (e) {}
-    }
-  } catch (e) {}
-  
-  // 登录成功后同步用户数据
-  try {
-    const { syncAll } = require('./sync');
-    syncAll().then(summary => {
-      console.log('[auth] 登录后数据同步完成:', summary);
-    }).catch(err => {
-      console.warn('[auth] 登录后数据同步失败:', err);
+      (resp && resp.data && (resp.data.id || resp.data.userId)) ||
+      (resp && (resp.id || resp.userId)) || undefined;
+    
+    console.log('[auth] 提取的认证信息:', { 
+      token: finalToken ? finalToken.substring(0, 20) + '...' : '(空)', 
+      userId: finalUserId,
+      tokenSource: finalToken ? (
+        (resp && resp.data && resp.data.token) ? 'resp.data.token' :
+        (resp && resp.user && resp.user.token) ? 'resp.user.token' :
+        (resp && resp.token) ? 'resp.token' : '未知'
+      ) : '无token'
     });
+    
+    // 立即保存 token 和 userId
+    if (finalToken) {
+      wx.setStorageSync('auth_token', finalToken);
+      wx.setStorageSync('token', finalToken);
+    }
+    if (finalToken || finalUserId) {
+      saveAuth({ token: finalToken, userId: finalUserId });
+    }
+    
+    console.log('[auth] 已保存认证信息:', { hasToken: !!finalToken, userId: finalUserId });
   } catch (e) {
-    console.warn('[auth] 数据同步模块加载失败:', e);
+    console.error('[auth] 保存认证信息失败:', e);
+  }
+  
+  // 登录成功后同步用户数据 - 确保 token 和 userId 已保存后再同步
+  if (finalToken && finalUserId) {
+    try {
+      const { syncAll } = require('./sync');
+      // 使用 setTimeout 确保 storage 写入完成
+      setTimeout(() => {
+        syncAll().then(summary => {
+          console.log('[auth] 登录后数据同步完成:', summary);
+        }).catch(err => {
+          console.warn('[auth] 登录后数据同步失败:', err);
+        });
+      }, 100);
+    } catch (e) {
+      console.warn('[auth] 数据同步模块加载失败:', e);
+    }
+  } else {
+    console.warn('[auth] 缺少 token 或 userId,跳过数据同步');
   }
   
   return { mergedUser, token: (resp && (resp.token || (resp.data && resp.data.token))) || '' };

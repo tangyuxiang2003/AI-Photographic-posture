@@ -46,7 +46,7 @@ async function syncFavorites() {
       cover: item.aiImageUrl || item.imageUrl || item.cover,
       tags: item.tags || [],
       type: item.type || 'AI',
-      createdAt: item.createdAt || item.createTime
+      collectTime: item.collectTime || item.createdAt || item.createTime || new Date().toISOString()
     })).filter(item => item.cover); // 过滤掉没有图片的项
 
     // 保存到本地
@@ -118,6 +118,16 @@ async function syncHistory() {
     return history;
   } catch (err) {
     console.error('[sync] 同步历史失败:', err);
+    // 如果是 403/401 错误,可能是接口权限问题,返回本地缓存
+    if (err && (err.statusCode === 403 || err.statusCode === 401)) {
+      console.warn('[sync] 历史记录接口权限不足,使用本地缓存');
+      try {
+        const localHistory = wx.getStorageSync('app_history') || [];
+        return localHistory;
+      } catch (e) {
+        return [];
+      }
+    }
     return [];
   }
 }
@@ -135,6 +145,7 @@ async function syncUserProfile() {
     }
 
     // 从后端获取用户信息
+    console.log('[sync] 开始同步用户信息...');
     const res = await get('/api/user/profile');
     
     let responseData = res.data;
@@ -176,6 +187,16 @@ async function syncUserProfile() {
     return userInfo;
   } catch (err) {
     console.error('[sync] 同步用户信息失败:', err);
+    // 如果是 403/401 错误,可能是接口权限问题,返回本地缓存的用户信息
+    if (err && (err.statusCode === 403 || err.statusCode === 401)) {
+      console.warn('[sync] 用户信息接口权限不足,使用本地缓存');
+      try {
+        const localProfile = wx.getStorageSync('profile_basic') || null;
+        return localProfile;
+      } catch (e) {
+        return null;
+      }
+    }
     return null;
   }
 }
@@ -187,13 +208,17 @@ async function syncUserProfile() {
 async function syncAll() {
   console.log('[sync] 开始完整数据同步...');
   
+  // 暂时只同步收藏,跳过用户信息和历史记录(这两个接口返回 403)
+  // TODO: 修复后端接口权限后恢复
   const results = await Promise.allSettled([
-    syncUserProfile(),
+    // syncUserProfile(),  // 暂时禁用
     syncFavorites(),
-    syncHistory()
+    // syncHistory()       // 暂时禁用
   ]);
 
-  const [profileResult, favoritesResult, historyResult] = results;
+  const [favoritesResult] = results;
+  const profileResult = { status: 'fulfilled', value: null };
+  const historyResult = { status: 'fulfilled', value: [] };
 
   const summary = {
     profile: profileResult.status === 'fulfilled' ? profileResult.value : null,

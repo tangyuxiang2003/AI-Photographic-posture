@@ -248,20 +248,42 @@ Page({
       const { get } = require('../../utils/request');
       // 后端为 GET /api/collection/list，通过 query 传参
       const resp = await get('/api/collection/list', { userId });
-      const items = resp?.data || [];
+      
+      // 解析后端响应格式
+      let responseData = resp?.data;
+      if (typeof responseData === 'string') {
+        try { responseData = JSON.parse(responseData); } catch(e) {
+          console.error('[photos] 解析响应失败:', e);
+          responseData = {};
+        }
+      }
+      
+      console.log('[photos] 后端响应:', responseData);
+      
+      // 提取数据数组
+      const items = responseData?.data || [];
       const base = Array.isArray(items) ? items : [];
       
       console.log('[photos] 从后端加载收藏列表，数量:', base.length);
+      if (base.length > 0) {
+        console.log('[photos] 第一条数据示例:', base[0]);
+      }
       
       // 规范化字段：id 用 aiImageId；cover 用 aiImageUrl；保留 collectTime
-      const normalized = this.normalizeFavorites(base.map(x => ({
-        id: x.aiImageId || x.id,
-        title: x.title || 'AI生成图',
-        cover: x.aiImageUrl || x.imageUrl || x.cover || x.url,
-        tags: Array.isArray(x.tags) ? x.tags : [],
-        type: x.type || 'AI',
-        collectTime: x.collectTime || new Date().toISOString()
-      })));
+      const normalized = this.normalizeFavorites(base.map(x => {
+        const item = {
+          id: x.aiImageId || x.id,
+          title: x.title || 'AI生成图',
+          cover: x.aiImageUrl || x.imageUrl || x.cover || x.url,
+          tags: Array.isArray(x.tags) ? x.tags : [],
+          type: x.type || 'AI',
+          collectTime: x.collectTime || x.createdAt || x.createTime || new Date().toISOString()
+        };
+        console.log('[photos] 规范化数据:', { 原始: x, 规范化: item });
+        return item;
+      }));
+      
+      console.log('[photos] 规范化后数量:', normalized.length);
       
       // 按收藏时间倒序排序（最新的在最上方）
       normalized.sort((a, b) => {

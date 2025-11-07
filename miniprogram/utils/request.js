@@ -31,6 +31,14 @@ function request({ url, method = 'GET', data = {}, headers = {}, timeout }) {
   const token = auth.token || '';
   const userId = auth.userId;
 
+  console.log('[request] 请求认证信息:', { 
+    url, 
+    method,
+    hasToken: !!token, 
+    tokenPreview: token ? token.substring(0, 20) + '...' : '(空)',
+    userId 
+  });
+
   const finalHeaders = {
     'Content-Type': 'application/json',
     Authorization: token ? `Bearer ${token}` : '',
@@ -43,7 +51,11 @@ function request({ url, method = 'GET', data = {}, headers = {}, timeout }) {
   let finalData = data || {};
   if (m === 'GET' || m === 'DELETE') {
     // 拼到 query（手动实现，兼容小程序环境）
-    const params = { ...finalData, userId };
+    const params = { ...finalData };
+    // 只有当 userId 存在且有效时才添加
+    if (userId !== undefined && userId !== null && String(userId) !== '') {
+      params.userId = userId;
+    }
     const queryPairs = [];
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null && String(v) !== '') {
@@ -54,21 +66,38 @@ function request({ url, method = 'GET', data = {}, headers = {}, timeout }) {
     finalUrl = query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url;
     finalData = undefined;
   } else {
-    // 放到 body
-    finalData = { userId, ...finalData };
+    // 放到 body - 只有当 userId 存在且有效时才添加
+    if (userId !== undefined && userId !== null && String(userId) !== '') {
+      finalData = { userId, ...finalData };
+    } else {
+      finalData = { ...finalData };
+    }
   }
 
   const baseTimeout = typeof timeout === 'number' ? timeout : 60000;
   const timeoutScaled = Math.floor(baseTimeout * 1.5);
 
+  const fullUrl = (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) ? finalUrl : (BASE_URL + finalUrl);
+  
+  console.log('[request] 完整请求信息:', {
+    url: fullUrl,
+    method: m,
+    headers: {
+      ...finalHeaders,
+      Authorization: finalHeaders.Authorization ? finalHeaders.Authorization.substring(0, 30) + '...' : '(空)'
+    },
+    data: finalData
+  });
+
   return new Promise((resolve, reject) => {
     wx.request({
-      url: (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) ? finalUrl : (BASE_URL + finalUrl),
+      url: fullUrl,
       method: m,
       data: finalData,
       header: finalHeaders,
       timeout: timeoutScaled,
       success: (res) => {
+        console.log('[request] 响应:', { url: fullUrl, status: res.statusCode, data: res.data });
         // 统一处理 401（token 过期/无效）
         if (res.statusCode === 401 || res.statusCode === 403) {
           clearAuthTokens();
@@ -140,7 +169,10 @@ function upload({ url, filePath, name = 'file', formData = {}, headers = {}, tim
     ...headers,
   };
 
-  const finalForm = { userId, ...(formData || {}) };
+  // 只有当 userId 存在且有效时才添加到 formData
+  const finalForm = userId !== undefined && userId !== null && String(userId) !== '' 
+    ? { userId, ...(formData || {}) }
+    : { ...(formData || {}) };
 
   const baseTimeout = typeof timeout === 'number' ? timeout : 60000;
   const timeoutScaled = Math.floor(baseTimeout * 1.5);
