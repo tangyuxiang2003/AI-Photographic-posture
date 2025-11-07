@@ -40,14 +40,28 @@ async function syncFavorites() {
     const items = Array.isArray(responseData.data) ? responseData.data : [];
     
     // 转换为本地格式
-    const favorites = items.map(item => ({
-      id: item.aiImageId || item.id,
-      title: item.title || 'AI生成图',
-      cover: item.aiImageUrl || item.imageUrl || item.cover,
-      tags: item.tags || [],
-      type: item.type || 'AI',
-      collectTime: item.collectTime || item.createdAt || item.createTime || new Date().toISOString()
-    })).filter(item => item.cover); // 过滤掉没有图片的项
+    const favorites = items.map(item => {
+      // 处理标签：后端可能返回字符串或数组
+      let tags = [];
+      if (Array.isArray(item.tags)) {
+        tags = item.tags;
+      } else if (typeof item.tags === 'string' && item.tags.trim()) {
+        // 如果是字符串，按逗号、空格等分割
+        tags = item.tags.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+      } else if (item.tag && typeof item.tag === 'string' && item.tag.trim()) {
+        // 兼容后端可能使用 tag 字段（单数）
+        tags = item.tag.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+      }
+      
+      return {
+        id: item.aiImageId || item.id,
+        title: item.title || 'AI生成图',
+        cover: item.aiImageUrl || item.imageUrl || item.cover,
+        tags: tags,
+        type: item.type || 'AI',
+        collectTime: item.collectTime || item.createdAt || item.createTime || new Date().toISOString()
+      };
+    }).filter(item => item.cover); // 过滤掉没有图片的项
 
     // 保存到本地
     const urls = favorites.map(f => f.cover);

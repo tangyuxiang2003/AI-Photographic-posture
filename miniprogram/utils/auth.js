@@ -156,7 +156,7 @@ function persistAndSync(dataUser, fallbackUser) {
   };
 
   const nick = pickNonEmpty(
-    dataUser && dataUser.nickName,
+    dataUser && (dataUser.nickName || dataUser.nickname),
     fallbackUser && fallbackUser.nickName,
     '微信昵称'
   );
@@ -241,7 +241,10 @@ async function authorizeLogin(externalUserInfo) {
       throw e;
     }
   }
-  const mergedUser = persistAndSync(resp.user, userInfo);
+  // 从后端响应中提取用户信息，优先使用 resp.data，其次 resp.user
+  const backendUser = (resp && resp.data) || (resp && resp.user) || {};
+  const mergedUser = persistAndSync(backendUser, userInfo);
+  
   // 统一抽取 token 与 userId 并保存
   let finalToken = '';
   let finalUserId = undefined;

@@ -242,6 +242,7 @@ Page({
     const { authorizeLogin } = require('../../utils/auth.js');
     authorizeLogin(externalUser)
       .then(({ mergedUser }) => {
+        console.log('[profile] 登录成功，用户信息:', mergedUser);
         this.setData({ profile: { ...mergedUser, hasAuth: true } });
         try { wx.setStorageSync('profile_basic', { ...mergedUser, hasAuth: true }); } catch (e) {}
         wx.showToast({ title: '登录成功', icon: 'success' });
@@ -306,21 +307,88 @@ Page({
       content: current,
       confirmText: '保存',
       cancelText: '取消',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           const name = String(res.content || '').trim();
           if (!name) {
             wx.showToast({ title: '昵称不能为空', icon: 'none' });
             return;
           }
-          const merged = { ...this.data.profile, nickName: name, hasAuth: true };
-          this.setData({ profile: merged });
-          try { wx.setStorageSync('profile_basic', merged); } catch (e) {}
+          
+          // 调用后端接口更新昵称
           try {
-            const app = getApp && getApp();
-            if (app && app.globalData) app.globalData.userInfo = { ...merged };
-          } catch (e) {}
-          wx.showToast({ title: '已保存', icon: 'success' });
+            wx.showLoading({ title: '保存中...', mask: true });
+            
+            const { post } = require('../../utils/request');
+            const { getAuth } = require('../../utils/storage');
+            
+            const auth = getAuth() || {};
+            const userId = auth.userId;
+            const token = auth.token;
+            
+            console.log('[profile] 当前认证信息:', { 
+              hasToken: !!token, 
+              tokenPreview: token ? token.substring(0, 20) + '...' : '(空)',
+              userId: userId,
+              userIdType: typeof userId
+            });
+            
+            if (!userId) {
+              wx.showToast({ title: '用户信息异常，请重新登录', icon: 'none' });
+              wx.hideLoading();
+              return;
+            }
+            
+            if (!token) {
+              wx.showToast({ title: 'Token 已过期，请重新登录', icon: 'none' });
+              wx.hideLoading();
+              return;
+            }
+            
+            const requestData = { id: userId, nickname: name };
+            console.log('[profile] 更新昵称请求参数:', requestData);
+            console.log('[profile] 即将发送 POST 请求到: /api/user/updateNickname');
+            
+            // 调用后端接口（request.js 会自动添加 token 和 userId）
+            const response = await post('/api/user/updateNickname', requestData);
+            
+            console.log('[profile] 更新昵称响应:', response);
+            
+            // 解析后端响应，获取返回的昵称
+            let responseData = response?.data;
+            if (typeof responseData === 'string') {
+              try { responseData = JSON.parse(responseData); } catch(e) {}
+            }
+            
+            // 优先使用后端返回的 nickname，如果没有则使用用户输入的
+            const finalNickname = (responseData?.data?.nickname || responseData?.nickname || name);
+            
+            console.log('[profile] 使用昵称:', finalNickname);
+            
+            // 更新成功后，更新本地数据
+            const merged = { ...this.data.profile, nickName: finalNickname, hasAuth: true };
+            this.setData({ profile: merged });
+            try { wx.setStorageSync('profile_basic', merged); } catch (e) {}
+            
+            // 同步到全局
+            try {
+              const app = getApp && getApp();
+              if (app && app.globalData) app.globalData.userInfo = { ...merged };
+            } catch (e) {}
+            
+            wx.showToast({ title: '昵称修改成功', icon: 'success' });
+          } catch (err) {
+            console.error('[profile] 修改昵称失败', err);
+            
+            // 处理 401/403 错误
+            if (err.statusCode === 401 || err.statusCode === 403) {
+              wx.showToast({ title: '登录已过期，请重新登录', icon: 'none' });
+            } else {
+              wx.showToast({ title: '修改失败，请稍后重试', icon: 'none' });
+            }
+          } finally {
+            wx.hideLoading();
+          }
         }
       }
     });

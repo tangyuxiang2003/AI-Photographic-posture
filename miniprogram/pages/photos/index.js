@@ -329,12 +329,24 @@ Page({
       
       // 规范化字段：保留收藏记录的 id（collection 表主键）和 aiImageId
       const normalized = this.normalizeFavorites(base.map(x => {
+        // 处理标签：后端可能返回字符串或数组
+        let tags = [];
+        if (Array.isArray(x.tags)) {
+          tags = x.tags;
+        } else if (typeof x.tags === 'string' && x.tags.trim()) {
+          // 如果是字符串，按逗号、空格等分割
+          tags = x.tags.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+        } else if (x.tag && typeof x.tag === 'string' && x.tag.trim()) {
+          // 兼容后端可能使用 tag 字段（单数）
+          tags = x.tag.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+        }
+        
         const item = {
           id: x.id,  // 收藏记录的主键 ID
           aiImageId: x.aiImageId,  // AI 图片 ID
           title: x.title || 'AI生成图',
           cover: x.aiImageUrl || x.imageUrl || x.cover || x.url,
-          tags: Array.isArray(x.tags) ? x.tags : [],
+          tags: tags,
           type: x.type || 'AI',
           collectTime: x.collectTime || x.createdAt || x.createTime || new Date().toISOString()
         };

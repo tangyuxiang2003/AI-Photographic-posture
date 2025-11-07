@@ -342,14 +342,28 @@ Page({
     // 同步本地简单列表与收藏页对象列表（id 用 aiImageId，cover 用 url）
     const list = Object.keys(favMap);
     try { wx.setStorageSync('favorites', list); } catch(_) {}
-    const objList = list.map(u => ({ 
-      id: this.data.aiIdMap[u], 
-      title: 'AI生成图', 
-      cover: u, 
-      tags: [], 
-      type: 'AI',
-      collectTime: new Date().toISOString()
-    }));
+    
+    // 读取现有收藏数据，保留原有的标签
+    const existingFavorites = wx.getStorageSync('app_favorites') || [];
+    const existingMap = {};
+    existingFavorites.forEach(item => {
+      if (item && item.cover) {
+        existingMap[item.cover] = item;
+      }
+    });
+    
+    const objList = list.map(u => {
+      // 如果已存在该收藏，保留其标签和其他信息
+      const existing = existingMap[u];
+      return {
+        id: this.data.aiIdMap[u], 
+        title: existing?.title || 'AI生成图', 
+        cover: u, 
+        tags: existing?.tags || [],  // 保留原有标签
+        type: existing?.type || 'AI',
+        collectTime: existing?.collectTime || new Date().toISOString()
+      };
+    });
     try { wx.setStorageSync('app_favorites', objList); } catch(_) {}
     this.setData({ favMap });
     // 记录用户已进行过收藏行为，供收藏页判定"老用户"恢复历史
@@ -370,14 +384,27 @@ Page({
       if (willFav) { delete rollback[url]; } else { rollback[url] = true; }
       const rollList = Object.keys(rollback);
       try { wx.setStorageSync('favorites', rollList); } catch(_) {}
-      const rollObj = rollList.map(u => ({ 
-        id: this.data.aiIdMap[u], 
-        title: 'AI生成图', 
-        cover: u, 
-        tags: [], 
-        type: 'AI',
-        collectTime: new Date().toISOString()
-      }));
+      
+      // 回滚时也要保留原有标签
+      const existingFavs = wx.getStorageSync('app_favorites') || [];
+      const existingDataMap = {};
+      existingFavs.forEach(item => {
+        if (item && item.cover) {
+          existingDataMap[item.cover] = item;
+        }
+      });
+      
+      const rollObj = rollList.map(u => {
+        const existing = existingDataMap[u];
+        return {
+          id: this.data.aiIdMap[u], 
+          title: existing?.title || 'AI生成图', 
+          cover: u, 
+          tags: existing?.tags || [],  // 保留原有标签
+          type: existing?.type || 'AI',
+          collectTime: existing?.collectTime || new Date().toISOString()
+        };
+      });
       try { wx.setStorageSync('app_favorites', rollObj); } catch(_) {}
       this.setData({ favMap: rollback });
       wx.showToast({ title: '操作失败，请稍后重试', icon: 'none' });
