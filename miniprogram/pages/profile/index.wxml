@@ -68,7 +68,7 @@
     <view class="setting-row">
       <view class="setting-texts">
         <view class="setting-title">高清保存</view>
-        <view class="setting-sub">保存更清晰的图像（占用更大存储）</view>
+        <view class="setting-sub">保存更清晰的图像</view>
       </view>
       <switch checked="true" disabled="true" color="{{switchOnColor}}"></switch>
     </view>

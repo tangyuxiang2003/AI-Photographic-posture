@@ -35,7 +35,7 @@
 
   <!-- 放大的参考图（显示在左下角黑色区域上方） -->
   <view class="enlarged-reference {{enlargedImage ? 'show' : ''}} {{isMaxEnlarged ? 'max-enlarged' : ''}}" wx:if="{{enlargedImage}}" catchtap="onCloseEnlarged">
-    <image src="{{enlargedImage}}" mode="aspectFill"></image>
+    <image src="{{enlargedImage}}" mode="aspectFit"></image>
   </view>
 
   <!-- 底部黑色功能区 -->
@@ -57,7 +57,9 @@
       </view>
 
       <!-- 快门按钮 -->
-      <view class="shutter-btn" bindtap="takePhoto"></view>
+      <view class="shutter-btn" bindtap="takePhoto">
+        <image src="/images/快门.png" mode="widthFix"></image>
+      </view>
 
       <!-- 镜头反转按钮 -->
       <view class="switch-camera" bindtap="switchCamera">
