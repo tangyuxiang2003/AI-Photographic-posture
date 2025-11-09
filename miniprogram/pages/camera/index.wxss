@@ -223,6 +223,12 @@
   transform: scale(1);
 }
 
+/* 最大放大状态（3倍） */
+.enlarged-reference.max-enlarged {
+  width: 300rpx; /* 缩略图的3倍大小 */
+  height: 300rpx;
+}
+
 .enlarged-reference image {
   width: 100%;
   height: 100%;

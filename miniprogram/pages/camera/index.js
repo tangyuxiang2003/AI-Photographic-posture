@@ -8,7 +8,8 @@ Page({
     countdown: null, // 倒计时计时器
     isTakingPhoto: false, // 是否正在拍照
     generatedImages: [], // 生成的图片列表
-    enlargedImage: '' // 当前放大显示的图片
+    enlargedImage: '', // 当前放大显示的图片
+    isMaxEnlarged: false // 是否处于最大放大状态（3倍）
   },
 
   onLoad() {
@@ -57,20 +58,37 @@ Page({
   onThumbnailTap(e) {
     const url = e.currentTarget.dataset.url;
     if (url) {
-      this.setData({ enlargedImage: url });
+      this.setData({ 
+        enlargedImage: url,
+        isMaxEnlarged: false 
+      });
     }
   },
 
   // 点击屏幕收起放大图片
   onScreenTap() {
     if (this.data.enlargedImage) {
-      this.setData({ enlargedImage: '' });
+      this.setData({ 
+        enlargedImage: '',
+        isMaxEnlarged: false 
+      });
     }
   },
 
-  // 关闭放大图片
-  onCloseEnlarged() {
-    this.setData({ enlargedImage: '' });
+  // 关闭放大图片或切换放大倍数
+  onCloseEnlarged(e) {
+    // 阻止事件冒泡
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    
+    // 如果当前是最大放大状态，切换回普通放大
+    if (this.data.isMaxEnlarged) {
+      this.setData({ isMaxEnlarged: false });
+    } else {
+      // 如果是普通放大状态，切换到最大放大
+      this.setData({ isMaxEnlarged: true });
+    }
   },
 
   // 阻止事件冒泡

@@ -34,7 +34,7 @@
   </view>
 
   <!-- 放大的参考图（显示在左下角黑色区域上方） -->
-  <view class="enlarged-reference {{enlargedImage ? 'show' : ''}}" wx:if="{{enlargedImage}}" catchtap="onCloseEnlarged">
+  <view class="enlarged-reference {{enlargedImage ? 'show' : ''}} {{isMaxEnlarged ? 'max-enlarged' : ''}}" wx:if="{{enlargedImage}}" catchtap="onCloseEnlarged">
     <image src="{{enlargedImage}}" mode="aspectFill"></image>
   </view>
 
