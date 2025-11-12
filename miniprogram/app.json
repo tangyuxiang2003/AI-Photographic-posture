@@ -5,6 +5,9 @@
     "pages/camera/index",
     "pages/preview/index",
     "pages/photos/index",
+    "pages/gallery/index",
+    "pages/category-detail/category-detail",
+    "pages/pose-detail/pose-detail",
     "pages/profile/index",
     "pages/example/index",
     "pages/profile/suggestions/index"
@@ -27,6 +30,12 @@
         "text": "首页",
         "iconPath": "images/icons/home.png",
         "selectedIconPath": "images/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/gallery/index",
+        "text": "姿势厅",
+        "iconPath": "images/icons/examples.png",
+        "selectedIconPath": "images/icons/examples-active.png"
       },
       {
         "pagePath": "pages/photos/index",

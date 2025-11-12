@@ -1,0 +1,20 @@
+<view class="pose-detail-container">
+  <!-- 姿势图片 -->
+  <view class="pose-image-container">
+    <image class="pose-image" src="{{pose.url}}" mode="aspectFit" />
+    <view class="close-btn" bindtap="onClose">
+      <image class="close-icon" src="/images/icons/close.png" mode="aspectFit" />
+    </view>
+  </view>
+
+  <!-- 姿势信息 -->
+  <view class="pose-info">
+    <text class="pose-name">{{pose.name}}</text>
+    <text class="pose-description">{{pose.description || '暂无描述'}}</text>
+  </view>
+
+  <!-- 底部按钮 -->
+  <view class="bottom-actions">
+    <button class="use-btn" bindtap="onUse">使用这个姿势</button>
+  </view>
+</view>

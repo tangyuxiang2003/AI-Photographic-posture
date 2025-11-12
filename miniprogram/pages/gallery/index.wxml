@@ -1,0 +1,63 @@
+<view class="gallery-container">
+  <!-- 搜索框 -->
+  <view class="search-bar">
+    <input 
+      class="search-input" 
+      placeholder="搜索场景、人物或物品、多个以空格区分"
+      value="{{searchKeyword}}"
+      bindconfirm="onSearch"
+      bindinput="onSearchInput"
+    />
+    <image class="search-icon" src="/images/icons/question.svg" mode="aspectFit" />
+  </view>
+
+  <!-- 分类标签 -->
+  <scroll-view class="category-tags" scroll-x enable-flex>
+    <view 
+      wx:for="{{categoryTags}}" 
+      wx:key="id"
+      class="tag-item {{currentTagIndex === index ? 'active' : ''}}"
+      bindtap="onTagTap"
+      data-index="{{index}}"
+    >
+      {{item.name}}
+    </view>
+  </scroll-view>
+
+  <!-- 姿势列表 -->
+  <scroll-view class="pose-list" scroll-y>
+    <!-- 动态渲染姿势分组 -->
+    <view class="pose-section" wx:for="{{poseGroups}}" wx:key="tag" wx:for-item="group">
+      <view class="section-header">
+        <view class="section-title">
+          <text class="section-emoji">📸</text>
+          <text>{{group.tag}}</text>
+        </view>
+        <view class="view-all" bindtap="onViewAll" data-tag="{{group.tag}}">
+          全部 <text class="arrow">></text>
+        </view>
+      </view>
+      
+      <view class="pose-grid">
+        <view 
+          wx:for="{{group.poses}}" 
+          wx:key="id"
+          wx:for-item="pose"
+          class="pose-item"
+          bindtap="onPoseTap"
+          data-pose="{{pose}}"
+        >
+          <image class="pose-image" src="{{pose.url}}" mode="aspectFill" />
+          <view class="pose-overlay">
+            <button class="use-btn" bindtap="onUse" data-pose="{{pose}}" catchtap="onUse">使用</button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{poseGroups.length === 0}}">
+      <text class="empty-text">暂无姿势数据</text>
+    </view>
+  </scroll-view>
+</view>

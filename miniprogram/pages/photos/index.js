@@ -24,7 +24,6 @@ Page({
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
-      this.applyThemeColor(bg);
     } catch (e) {}
 
     // 显示加载提示
@@ -42,7 +41,6 @@ Page({
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
-      this.applyThemeColor(bg);
     } catch (e) {}
 
     // 每次显示页面时从后端刷新收藏列表

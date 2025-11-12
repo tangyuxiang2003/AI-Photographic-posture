@@ -1,0 +1,27 @@
+<view class="category-detail-container">
+  <!-- 标题 -->
+  <view class="category-header" style="padding-top: {{headerHeight}}px;">
+    <view class="back-btn" bindtap="onClose">
+      <text class="back-icon">‹</text>
+    </view>
+    <text class="category-name">{{categoryName}}</text>
+  </view>
+
+  <!-- 姿势网格 -->
+  <scroll-view class="pose-grid-container" style="margin-top: {{headerHeight + 60}}px; height: calc(100vh - {{headerHeight + 60}}px);">
+    <view class="pose-grid">
+      <view 
+        wx:for="{{poses}}" 
+        wx:key="id"
+        class="pose-item"
+        bindtap="onPoseTap"
+        data-pose="{{item}}"
+      >
+        <image class="pose-image" src="{{item.url}}" mode="aspectFill" />
+        <view class="pose-overlay">
+          <button class="use-btn" bindtap="onUse" data-pose="{{item}}" catchtap="onUse">使用</button>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

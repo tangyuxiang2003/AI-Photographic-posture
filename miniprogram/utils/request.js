@@ -8,7 +8,7 @@
  */
 const { getAuth, saveAuth } = require('./storage');
 
-const BASE_URL = 'http://192.168.43.179:8080'; // 如需 HTTPS，请改为 https://你的域名
+const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://你的域名
 
 // 统一清理本地登录态（token/auth_token 以及持久化的 auth）
 function clearAuthTokens() {
@@ -157,9 +157,10 @@ function post(url, body = {}, headers = {}) {
  * @param {string} [options.name='file'] - 后端接收的文件字段名
  * @param {Object} [options.formData={}] - 额外表单字段
  * @param {Object} [options.headers={}] - 额外请求头（会与默认头合并）
+ * @param {boolean} [options.autoAddUserId=true] - 是否自动添加 userId 到 formData
  * @returns {Promise<WechatMiniprogram.UploadFileSuccessCallbackResult>}
  */
-function upload({ url, filePath, name = 'file', formData = {}, headers = {}, timeout }) {
+function upload({ url, filePath, name = 'file', formData = {}, headers = {}, timeout, autoAddUserId = true }) {
   const auth = getAuth() || {};
   const token = auth.token || '';
   const userId = auth.userId;
@@ -169,17 +170,32 @@ function upload({ url, filePath, name = 'file', formData = {}, headers = {}, tim
     ...headers,
   };
 
-  // 只有当 userId 存在且有效时才添加到 formData
-  const finalForm = userId !== undefined && userId !== null && String(userId) !== '' 
-    ? { userId, ...(formData || {}) }
-    : { ...(formData || {}) };
+  // 根据 autoAddUserId 参数决定是否自动添加 userId
+  let finalForm = { ...(formData || {}) };
+  if (autoAddUserId && userId !== undefined && userId !== null && String(userId) !== '') {
+    finalForm = { userId, ...finalForm };
+  }
 
   const baseTimeout = typeof timeout === 'number' ? timeout : 60000;
   const timeoutScaled = Math.floor(baseTimeout * 1.5);
 
+  const fullUrl = (url.startsWith('http://') || url.startsWith('https://')) ? url : (BASE_URL + url);
+  
+  console.log('[upload] 上传文件请求详情:', {
+    url: fullUrl,
+    name,
+    formData: finalForm,
+    headers: {
+      Authorization: finalHeaders.Authorization ? finalHeaders.Authorization.substring(0, 30) + '...' : '(空)'
+    },
+    hasToken: !!token,
+    tokenPreview: token ? token.substring(0, 30) + '...' : '(空)',
+    filePath: filePath ? filePath.substring(0, 50) + '...' : '(空)'
+  });
+
   return new Promise((resolve, reject) => {
     wx.uploadFile({
-      url: (url.startsWith('http://') || url.startsWith('https://')) ? url : (BASE_URL + url),
+      url: fullUrl,
       filePath,
       name,
       formData: finalForm,

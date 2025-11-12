@@ -1,0 +1,50 @@
+<view class="container">
+  <view class="header">
+    <text class="title">姿势厅</text>
+    <text class="subtitle">发现更多拍照姿势灵感</text>
+  </view>
+
+  <view class="gallery-content">
+    <view class="category-tabs">
+      <view class="tab {{currentTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
+        <text>推荐</text>
+      </view>
+      <view class="tab {{currentTab === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">
+        <text>人像</text>
+      </view>
+      <view class="tab {{currentTab === 2 ? 'active' : ''}}" bindtap="switchTab" data-index="2">
+        <text>风景</text>
+      </view>
+      <view class="tab {{currentTab === 3 ? 'active' : ''}}" bindtap="switchTab" data-index="3">
+        <text>创意</text>
+      </view>
+    </view>
+
+    <scroll-view class="pose-list" scroll-y>
+      <view class="pose-grid">
+        <view class="pose-item" wx:for="{{poseList}}" wx:key="id" bindtap="viewPoseDetail" data-id="{{item.id}}">
+          <image class="pose-image" src="{{item.image}}" mode="aspectFill" />
+          <view class="pose-info">
+            <text class="pose-name">{{item.name}}</text>
+            <view class="pose-meta">
+              <text class="like-count">♥ {{item.likes}}</text>
+              <text class="view-count">👁 {{item.views}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <view class="loading" wx:if="{{loading}}">
+        <text>加载中...</text>
+      </view>
+      
+      <view class="no-more" wx:if="{{!hasMore && poseList.length > 0}}">
+        <text>没有更多了</text>
+      </view>
+      
+      <view class="empty" wx:if="{{poseList.length === 0 && !loading}}">
+        <text>暂无姿势推荐</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>

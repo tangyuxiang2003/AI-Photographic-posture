@@ -1,0 +1,82 @@
+.pose-detail-container {
+  width: 100%;
+  min-height: 100vh;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 姿势图片容器 */
+.pose-image-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.pose-image {
+  width: 100%;
+  height: 100%;
+}
+
+.close-btn {
+  position: absolute;
+  right: 24rpx;
+  top: 60rpx;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.close-icon {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+/* 姿势信息 */
+.pose-info {
+  background: #fff;
+  padding: 32rpx 24rpx;
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.pose-name {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.pose-description {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* 底部按钮 */
+.bottom-actions {
+  background: #fff;
+  padding: 24rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.use-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #FFB800 0%, #FFA000 100%);
+  color: #fff;
+  border: none;
+  border-radius: 48rpx;
+  padding: 28rpx 0;
+  font-size: 32rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(255, 160, 0, 0.3);
+}

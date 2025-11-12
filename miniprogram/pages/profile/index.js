@@ -37,7 +37,7 @@ Page({
       '三分法构图：主体靠近九宫格交点更耐看',
       '尽量稳住手机，按快门前呼吸停顿可减少抖动',
       '拍人像时背景尽量简洁，避免杂物干扰主体',
-      '适度留白，给画面“呼吸感”'
+      '适度留白，给画面"呼吸感"'
     ]
   },
 
@@ -62,7 +62,10 @@ Page({
       if (enabled !== this.data.themeEnabled) next.themeEnabled = enabled;
       if (tipsEnabled !== this.data.tipsEnabled) next.tipsEnabled = tipsEnabled;
       if (Object.keys(next).length) this.setData(next);
-      this.applyThemeColor(bg);
+      // 只在个人中心页面应用主题色
+      if (this.data.themeEnabled) {
+        this.applyThemeColor(bg);
+      }
     } catch (e) {}
   },
 
@@ -128,7 +131,15 @@ Page({
     const color = e?.currentTarget?.dataset?.color || '#FFF7FA';
     this.setData({ themeBg: color });
     try { wx.setStorageSync('theme_bg', color); } catch (e2) {}
-    this.applyThemeColor(color);
+    // 更新全局主题
+    const app = getApp();
+    if (app && app.setTheme) {
+      app.setTheme(color);
+    }
+    // 只在启用主题时应用
+    if (this.data.themeEnabled) {
+      this.applyThemeColor(color);
+    }
   },
 
   // 开关：是否启用背景主题色选择（仅控制调色盘显示）
@@ -206,20 +217,189 @@ Page({
     return yiq >= 160 ? '#000000' : '#ffffff';
   },
 
+  // 测试认证是否有效
+  async testAuth() {
+    try {
+      const { get } = require('../../utils/request');
+      const { getAuth } = require('../../utils/storage');
+      
+      const auth = getAuth() || {};
+      console.log('[profile] 测试认证 - 当前认证信息:', {
+        hasToken: !!auth.token,
+        tokenPreview: auth.token ? auth.token.substring(0, 30) + '...' : '(空)',
+        userId: auth.userId
+      });
+      
+      // 尝试调用一个简单的接口测试认证
+      const response = await get('/api/user/info');
+      console.log('[profile] 认证测试成功:', response);
+      wx.showToast({ title: '认证有效', icon: 'success' });
+    } catch (err) {
+      console.error('[profile] 认证测试失败:', err);
+      wx.showToast({ title: '认证失败: ' + err.statusCode, icon: 'none' });
+    }
+  },
+
   // 用户选择头像
-  onChooseAvatar(e) {
+  async onChooseAvatar(e) {
     const url = e?.detail?.avatarUrl || '';
     if (!url) return;
-    // 已登录：直接更新正式头像并持久化
+    
+    // 已登录：上传头像到后端
     if (this.data.profile && this.data.profile.hasAuth) {
-      const merged = { ...this.data.profile, avatarUrl: url, hasAuth: true };
-      this.setData({ profile: merged });
-      try { wx.setStorageSync('profile_basic', merged); } catch (err) {}
-      try { console.log('[profile] avatar updated after auth', merged.avatarUrl); } catch (_) {}
-      wx.showToast({ title: '头像已更新', icon: 'success' });
+      try {
+        wx.showLoading({ title: '上传中...', mask: true });
+        
+        const { upload } = require('../../utils/request');
+        const { getAuth } = require('../../utils/storage');
+        
+        const auth = getAuth() || {};
+        const userId = auth.userId;
+        const token = auth.token;
+        
+        console.log('[profile] 上传头像 - 认证信息:', { 
+          userId, 
+          hasToken: !!token,
+          tokenPreview: token ? token.substring(0, 20) + '...' : '(空)'
+        });
+        
+        if (!userId) {
+          wx.showToast({ title: '用户信息异常，请重新登录', icon: 'none' });
+          wx.hideLoading();
+          return;
+        }
+        
+        if (!token) {
+          wx.showToast({ title: 'Token 已过期，请重新登录', icon: 'none' });
+          wx.hideLoading();
+          return;
+        }
+        
+        // 先测试一下修改昵称接口是否正常（验证 Token 是否有效）
+        try {
+          const { post } = require('../../utils/request');
+          console.log('[profile] 测试 Token 有效性 - 调用修改昵称接口');
+          const testResponse = await post('/api/user/updateNickname', {
+            id: userId,
+            nickname: this.data.profile.nickName || '测试'
+          });
+          console.log('[profile] Token 测试成功:', testResponse);
+        } catch (testErr) {
+          console.error('[profile] Token 测试失败:', testErr);
+          if (testErr.statusCode === 401 || testErr.statusCode === 403) {
+            wx.showToast({ title: 'Token 无效，请重新登录', icon: 'none' });
+            wx.hideLoading();
+            return;
+          }
+        }
+        
+        // 调用后端上传接口
+        console.log('[profile] 准备上传头像:', {
+          url: '/api/user/uploadAvatar',
+          filePath: url,
+          filePathType: typeof url,
+          name: 'avatar',
+          formData: { id: String(userId) },
+          userId: userId,
+          userIdType: typeof userId
+        });
+        
+        const response = await upload({
+          url: '/api/user/uploadAvatar',
+          filePath: url,
+          name: 'avatar', // 后端接收的文件字段名
+          formData: {
+            id: String(userId) // 确保 id 是字符串类型
+          },
+          autoAddUserId: false // 不自动添加 userId，避免与 id 参数冲突
+        });
+        
+        console.log('[profile] 上传头像完整响应:', {
+          statusCode: response.statusCode,
+          data: response.data,
+          header: response.header,
+          errMsg: response.errMsg
+        });
+        
+        // 解析响应
+        let responseData = response?.data;
+        if (typeof responseData === 'string') {
+          try { responseData = JSON.parse(responseData); } catch(e) {}
+        }
+        
+        // 检查上传是否成功
+        if (response.statusCode === 200 && responseData?.code === 200) {
+          // 上传成功，更新本地头像
+          const merged = { ...this.data.profile, avatarUrl: url, hasAuth: true };
+          this.setData({ profile: merged });
+          try { wx.setStorageSync('profile_basic', merged); } catch (err) {}
+          
+          // 同步到全局
+          try {
+            const app = getApp && getApp();
+            if (app && app.globalData) app.globalData.userInfo = { ...merged };
+          } catch (e) {}
+          
+          console.log('[profile] 头像上传成功:', merged.avatarUrl);
+          wx.showToast({ title: '头像修改成功', icon: 'success' });
+        } else {
+          // 上传失败
+          const msg = responseData?.msg || '上传失败';
+          wx.showToast({ title: msg, icon: 'none' });
+        }
+      } catch (err) {
+        console.error('[profile] 上传头像失败 - 详细错误:', {
+          statusCode: err.statusCode,
+          data: err.data,
+          errMsg: err.errMsg,
+          header: err.header
+        });
+        
+        // 处理不同的错误状态码
+        if (err.statusCode === 401) {
+          wx.showModal({
+            title: '认证失败',
+            content: 'Token 已过期或无效，请重新登录',
+            showCancel: false,
+            success: () => {
+              // 清除本地认证信息
+              try {
+                wx.removeStorageSync('authData');
+                wx.removeStorageSync('token');
+                wx.removeStorageSync('auth_token');
+                wx.removeStorageSync('profile_basic');
+              } catch (e) {}
+              // 刷新页面
+              this.setData({
+                profile: {
+                  avatarUrl: '',
+                  nickName: '未登录',
+                  hasAuth: false
+                }
+              });
+            }
+          });
+        } else if (err.statusCode === 403) {
+          wx.showModal({
+            title: '权限不足',
+            content: `无法上传头像，可能是：
+1. Token 无效
+2. 用户权限不足
+3. 接口参数错误
+
+状态码: 403`,
+            showCancel: false
+          });
+        } else {
+          wx.showToast({ title: '上传失败: ' + (err.statusCode || '网络错误'), icon: 'none' });
+        }
+      } finally {
+        wx.hideLoading();
+      }
       return;
     }
-    // 未登录：先作为临时头像，后续点“点击登录”再走授权与落库
+    
+    // 未登录：先作为临时头像，后续点"点击登录"再走授权与落库
     this.setData({ tempAvatarUrl: url });
   },
 

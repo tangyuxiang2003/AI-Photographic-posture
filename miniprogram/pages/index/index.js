@@ -375,7 +375,6 @@ Page({
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
-      this.applyThemeColor(bg);
     } catch (e) {}
     // 读取个人中心开关：tips_enabled 控制首页两个区块显示
     try {
@@ -404,7 +403,6 @@ Page({
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
-      this.applyThemeColor(bg);
     } catch (e) {}
     // 同步个人中心开关
     try {

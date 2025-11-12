@@ -1,3 +1,12 @@
+<wxs module="util">
+  var toFixed = function(num) {
+    return num.toFixed(1);
+  };
+  module.exports = {
+    toFixed: toFixed
+  };
+</wxs>
+
 <view class="analyze-wrap">
   <!-- 生成中：仅显示进度卡片 -->
   <view wx:if="{{!done && !failed}}" class="progress-wrap">
@@ -5,7 +14,7 @@
       <view class="stars stars-1"></view>
       <view class="stars stars-2"></view>
 
-      <view class="progress-text">生成中 {{progress}}%</view>
+      <view class="progress-text">生成中 {{util.toFixed(progress)}}%</view>
       <view class="progress-subtext">你的专属姿势即将完成！</view>
     </view>
   </view>
