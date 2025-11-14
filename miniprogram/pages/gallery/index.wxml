@@ -44,12 +44,27 @@
           wx:key="id"
           wx:for-item="pose"
           class="pose-item"
-          bindtap="onPoseTap"
-          data-pose="{{pose}}"
         >
-          <image class="pose-image" src="{{pose.url}}" mode="aspectFill" />
+          <image 
+            class="pose-image" 
+            src="{{pose.url}}" 
+            mode="aspectFill" 
+            bindtap="onPoseTap"
+            data-pose="{{pose}}"
+            data-group="{{group}}"
+          />
+          
+          <!-- 收藏按钮（仅登录用户可见） -->
+          <view wx:if="{{isLoggedIn}}" class="favorite-btn" catchtap="onToggleFavorite" data-pose="{{pose}}" data-group="{{group}}">
+            <image 
+              class="favorite-icon" 
+              src="{{favoriteMap[pose.url] ? '/images/icons/heart-filled.svg' : '/images/icons/heart.svg'}}" 
+              mode="aspectFit" 
+            />
+          </view>
+          
           <view class="pose-overlay">
-            <button class="use-btn" bindtap="onUse" data-pose="{{pose}}" catchtap="onUse">使用</button>
+            <button class="use-btn" catchtap="onUse" data-pose="{{pose}}">使用</button>
           </view>
         </view>
       </view>

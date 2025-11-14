@@ -307,4 +307,32 @@ async function authorizeLogin(externalUserInfo) {
   return { mergedUser, token: (resp && (resp.token || (resp.data && resp.data.token))) || '' };
 }
 
-module.exports = { authorizeLogin };
+// 检查用户是否已登录
+function isLoggedIn() {
+  try {
+    // 检查是否跳过了授权（游客模式）
+    const authBypassed = wx.getStorageSync('auth_bypassed');
+    if (authBypassed) {
+      return false;
+    }
+    
+    // 检查是否有有效的 token
+    const token = wx.getStorageSync('auth_token') || wx.getStorageSync('token');
+    if (!token) {
+      return false;
+    }
+    
+    // 检查是否有用户信息
+    const profile = wx.getStorageSync('profile_basic');
+    if (profile && profile.hasAuth) {
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    console.error('检查登录状态失败:', e);
+    return false;
+  }
+}
+
+module.exports = { authorizeLogin, isLoggedIn };

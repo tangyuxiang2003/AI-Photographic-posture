@@ -25,11 +25,50 @@ Page({
     poseGroups: [],
     
     // 原始姿势数据（用于搜索过滤）
-    allPoseGroups: []
+    allPoseGroups: [],
+    
+    // 收藏状态映射 { url: true/false }
+    favoriteMap: {},
+    
+    // 登录状态
+    isLoggedIn: false
   },
 
   onLoad() {
+    this.checkLoginStatus()
     this.loadPoses()
+    this.loadFavorites()
+  },
+
+  onShow() {
+    // 每次显示页面时重新检查登录状态和收藏状态
+    this.checkLoginStatus()
+    this.loadFavorites()
+  },
+
+  // 检查登录状态
+  checkLoginStatus() {
+    const isLoggedIn = authUtil.isLoggedIn()
+    this.setData({ isLoggedIn })
+  },
+
+  // 加载收藏状态
+  loadFavorites() {
+    try {
+      // 从本地收藏列表中加载（支持完整数据结构）
+      const localFavorites = wx.getStorageSync('local_favorites') || []
+      const favoriteMap = {}
+      localFavorites.forEach(item => {
+        // 兼容旧格式（纯URL）和新格式（对象）
+        const url = typeof item === 'string' ? item : item.cover
+        if (url) {
+          favoriteMap[url] = true
+        }
+      })
+      this.setData({ favoriteMap })
+    } catch (error) {
+      console.error('加载收藏状态失败:', error)
+    }
   },
 
   // 加载姿势数据
@@ -207,27 +246,35 @@ Page({
     })
   },
 
-  // 姿势点击
+  // 姿势点击 - 预览图片
   onPoseTap(e) {
     const pose = e.currentTarget.dataset.pose
-    wx.navigateTo({
-      url: `/pages/pose-detail/pose-detail?id=${pose.id}&url=${encodeURIComponent(pose.url)}`
+    const group = e.currentTarget.dataset.group
+    
+    // 获取当前分组的所有图片URL
+    const urls = group && group.poses ? group.poses.map(p => p.url) : [pose.url]
+    
+    wx.previewImage({
+      current: pose.url,
+      urls: urls
     })
   },
 
-  // 使用按钮点击
+  // 使用按钮点击 - 跳转到自定义功能拍摄界面
   onUse(e) {
     const pose = e.currentTarget.dataset.pose
     
     // 检查登录状态
     if (!authUtil.isLoggedIn()) {
       wx.showModal({
-        title: '需要登录',
-        content: '使用姿势需要先登录，是否前往登录？',
-        confirmText: '去登录',
+        title: '需要授权登录',
+        content: '使用拍照功能需要先授权登录，是否前往授权？',
+        confirmText: '去授权',
+        cancelText: '取消',
         success: (res) => {
           if (res.confirm) {
-            wx.navigateTo({
+            // 跳转到个人中心进行授权
+            wx.switchTab({
               url: '/pages/profile/index'
             })
           }
@@ -236,14 +283,158 @@ Page({
       return
     }
 
-    // TODO: 后续实现跳转到拍摄页面
-    wx.showToast({
-      title: '准备进入拍摄',
-      icon: 'none'
+    // 跳转到自定义功能拍摄界面（analyze页面）
+    wx.navigateTo({
+      url: '/pages/analyze/index',
+      success: (res) => {
+        // 通过 eventChannel 传递姿势参考图
+        res.eventChannel.emit('startAnalyzePayload', {
+          localPath: pose.url, // 传递姿势图片URL作为参考
+          desc: `参考姿势 ${pose.id}`,
+          textOnly: false
+        })
+      }
     })
+  },
+
+  // 切换收藏状态
+  async onToggleFavorite(e) {
+    // 检查登录状态
+    if (!authUtil.isLoggedIn()) {
+      wx.showModal({
+        title: '需要授权登录',
+        content: '收藏功能需要先授权登录，是否前往授权？',
+        confirmText: '去授权',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({
+              url: '/pages/profile/index'
+            })
+          }
+        }
+      })
+      return
+    }
+
+    const pose = e.currentTarget.dataset.pose
+    const group = e.currentTarget.dataset.group
     
-    // wx.navigateTo({
-    //   url: `/pages/camera/index?poseId=${pose.id}`
-    // })
+    try {
+      // 使用新的本地收藏列表（支持完整数据结构）
+      let localFavorites = wx.getStorageSync('local_favorites') || []
+      
+      // 查找是否已收藏
+      const index = localFavorites.findIndex(item => {
+        const url = typeof item === 'string' ? item : item.cover
+        return url === pose.url
+      })
+      
+      if (index > -1) {
+        // 已收藏，取消收藏
+        const favoriteItem = localFavorites[index]
+        localFavorites.splice(index, 1)
+        
+        // 调用后端删除接口
+        if (favoriteItem.aiImageId) {
+          try {
+            wx.showLoading({ title: '删除中...', mask: true })
+            const { post } = require('../../utils/request')
+            const { getAuth } = require('../../utils/storage')
+            const auth = getAuth() || {}
+            const userId = auth.userId
+            
+            await post('/api/collection/remove', { 
+              aiImageId: favoriteItem.aiImageId,
+              userId 
+            })
+            wx.hideLoading()
+          } catch (err) {
+            console.error('后端删除收藏失败:', err)
+            wx.hideLoading()
+          }
+        }
+        
+        wx.showToast({
+          title: '已取消收藏',
+          icon: 'success',
+          duration: 1500
+        })
+      } else {
+        // 未收藏，添加收藏（保存完整数据结构）
+        const favoriteItem = {
+          id: `local_${Date.now()}_${pose.id}`, // 本地收藏ID
+          aiImageId: pose.id, // 姿势ID
+          title: group ? group.tag : '参考姿势',
+          cover: pose.url,
+          tags: group ? [group.tag] : [],
+          type: 'Reference', // 参考图类型
+          collectTime: new Date().toISOString()
+        }
+        
+        localFavorites.push(favoriteItem)
+        
+        // 调用后端接口保存收藏
+        try {
+          wx.showLoading({ title: '收藏中...', mask: true })
+          const { post } = require('../../utils/request')
+          const { getAuth } = require('../../utils/storage')
+          const auth = getAuth() || {}
+          const userId = auth.userId
+          
+          const response = await post('/api/collection/add', {
+            aiImageId: pose.id,
+            aiImageUrl: pose.url,
+            title: group ? group.tag : '参考姿势',
+            tag: group ? group.tag : '',
+            type: 'Reference',
+            userId
+          })
+          
+          console.log('[gallery] 收藏响应:', response)
+          
+          // 解析响应获取后端返回的收藏ID
+          let responseData = response?.data
+          if (typeof responseData === 'string') {
+            try { responseData = JSON.parse(responseData) } catch(e) {}
+          }
+          
+          // 更新本地收藏项的ID为后端返回的ID
+          if (responseData?.data?.id) {
+            favoriteItem.id = responseData.data.id
+            localFavorites[localFavorites.length - 1] = favoriteItem
+          }
+          
+          wx.hideLoading()
+          wx.showToast({
+            title: '收藏成功',
+            icon: 'success',
+            duration: 1500
+          })
+        } catch (err) {
+          console.error('后端收藏失败:', err)
+          wx.hideLoading()
+          wx.showToast({
+            title: '收藏失败，请稍后重试',
+            icon: 'none',
+            duration: 2000
+          })
+          // 收藏失败时从本地列表中移除
+          localFavorites.pop()
+        }
+      }
+      
+      // 保存到本地存储
+      wx.setStorageSync('local_favorites', localFavorites)
+      
+      // 更新收藏状态
+      this.loadFavorites()
+    } catch (error) {
+      console.error('收藏操作失败:', error)
+      wx.showToast({
+        title: '操作失败',
+        icon: 'none'
+      })
+    }
   }
 })

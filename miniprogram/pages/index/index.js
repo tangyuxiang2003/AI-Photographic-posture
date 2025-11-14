@@ -147,6 +147,8 @@ Page({
           // 使用封装的 setToken，统一注入到 utils/request.js
           try { require('../../utils/request.js').setToken(token); } catch (e) {}
         }
+        // 清除游客模式标记
+        try { wx.removeStorageSync('auth_bypassed'); } catch (e) {}
         this.setData({
           profile: { ...this.data.profile, ...mergedUser, hasAuth: true },
           showAuthOverlay: false,

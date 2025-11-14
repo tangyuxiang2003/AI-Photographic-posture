@@ -40,6 +40,33 @@
   height: 32rpx;
 }
 
+/* 收藏按钮 */
+.favorite-btn-detail {
+  position: absolute;
+  left: 24rpx;
+  top: 60rpx;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  z-index: 10;
+  backdrop-filter: blur(8rpx);
+  transition: all 0.3s;
+}
+
+.favorite-btn-detail:active {
+  transform: scale(0.9);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.favorite-icon-detail {
+  width: 36rpx;
+  height: 36rpx;
+}
+
 /* 姿势信息 */
 .pose-info {
   background: #fff;

@@ -2,8 +2,19 @@
   <!-- 姿势图片 -->
   <view class="pose-image-container">
     <image class="pose-image" src="{{pose.url}}" mode="aspectFit" />
+    
+    <!-- 关闭按钮 -->
     <view class="close-btn" bindtap="onClose">
       <image class="close-icon" src="/images/icons/close.png" mode="aspectFit" />
+    </view>
+    
+    <!-- 收藏按钮（仅登录用户可见） -->
+    <view wx:if="{{isLoggedIn}}" class="favorite-btn-detail" bindtap="onToggleFavorite">
+      <image 
+        class="favorite-icon-detail" 
+        src="{{isFavorite ? '/images/icons/heart-filled.svg' : '/images/icons/heart.svg'}}" 
+        mode="aspectFit" 
+      />
     </view>
   </view>
 
@@ -15,6 +26,6 @@
 
   <!-- 底部按钮 -->
   <view class="bottom-actions">
-    <button class="use-btn" bindtap="onUse">使用这个姿势</button>
+    <button class="use-btn" bindtap="onUse">使用这个姿势拍摄</button>
   </view>
 </view>

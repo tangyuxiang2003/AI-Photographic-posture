@@ -29,8 +29,8 @@ Page({
     // 显示加载提示
     wx.showLoading({ title: '加载中...', mask: true });
     
-    // 直接从后端加载收藏列表
-    this.fetchFavorites().finally(() => {
+    // 加载收藏列表（本地+服务器）
+    this.loadAllFavorites().finally(() => {
       wx.hideLoading();
       wx.showShareMenu({ withShareTicket: true });
     });
@@ -43,8 +43,8 @@ Page({
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
     } catch (e) {}
 
-    // 每次显示页面时从后端刷新收藏列表
-    this.fetchFavorites();
+    // 每次显示页面时刷新收藏列表（本地+服务器）
+    this.loadAllFavorites();
   },
 
   // 应用主题背景到导航栏、页面与底部tabBar
@@ -256,8 +256,8 @@ Page({
       // 使用 aiImageId 调用删除接口
       await post('/api/collection/remove', { aiImageId, userId });
       
-      // 删除成功后重新从后端加载列表
-      await this.fetchFavorites();
+      // 删除成功后重新加载列表
+      await this.loadAllFavorites();
       wx.showToast({ title: '已取消收藏', icon: 'none' });
     } catch (err) {
       console.error('取消收藏失败', err);
@@ -281,8 +281,47 @@ Page({
     wx.showToast({ title: '已为你推荐新顺序', icon: 'none' })
   },
 
-  // 后端拉取收藏列表（按你的接口：/api/collection/list）
-  async fetchFavorites() {
+  // 加载所有收藏（本地+服务器）
+  async loadAllFavorites() {
+    try {
+      // 1. 加载本地收藏
+      const localFavorites = wx.getStorageSync('local_favorites') || []
+      
+      // 2. 如果已登录，加载服务器收藏
+      let serverFavorites = []
+      const { hasToken } = require('../../utils/storage')
+      if (hasToken && hasToken()) {
+        serverFavorites = await this.fetchServerFavorites()
+      }
+      
+      // 3. 合并本地和服务器收藏（去重）
+      const allFavorites = [...localFavorites]
+      const localUrls = new Set(localFavorites.map(item => item.cover))
+      
+      serverFavorites.forEach(item => {
+        if (!localUrls.has(item.cover)) {
+          allFavorites.push(item)
+        }
+      })
+      
+      // 4. 规范化并按时间排序
+      const normalized = this.normalizeFavorites(allFavorites)
+      normalized.sort((a, b) => {
+        const timeA = new Date(a.collectTime).getTime()
+        const timeB = new Date(b.collectTime).getTime()
+        return timeB - timeA // 倒序
+      })
+      
+      this.setData({ favorites: normalized }, this.computeFiltered)
+    } catch (e) {
+      console.error('[photos] loadAllFavorites failed', e)
+      wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
+      this.setData({ favorites: [], filtered: [] })
+    }
+  },
+
+  // 从服务器拉取收藏列表
+  async fetchServerFavorites() {
     try {
       const { hasToken, getAuth } = require('../../utils/storage');
       if (!hasToken()) {
@@ -352,20 +391,12 @@ Page({
         return item;
       }));
       
-      console.log('[photos] 规范化后数量:', normalized.length);
+      console.log('[photos] 规范化后数量:', normalized.length)
       
-      // 按收藏时间倒序排序（最新的在最上方）
-      normalized.sort((a, b) => {
-        const timeA = new Date(a.collectTime).getTime();
-        const timeB = new Date(b.collectTime).getTime();
-        return timeB - timeA; // 倒序
-      });
-      
-      this.setData({ favorites: normalized }, this.computeFiltered);
+      return normalized
     } catch (e) {
-      console.error('[photos] fetchFavorites failed', e);
-      wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' });
-      this.setData({ favorites: [], filtered: [] });
+      console.error('[photos] fetchServerFavorites failed', e)
+      return []
     }
   },
 
