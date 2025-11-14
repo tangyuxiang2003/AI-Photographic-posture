@@ -8,7 +8,7 @@
       bindconfirm="onSearch"
       bindinput="onSearchInput"
     />
-    <image class="search-icon" src="/images/icons/question.svg" mode="aspectFit" />
+    <image class="search-icon" src="/images/icons/search.svg" mode="aspectFit" bindtap="onSearch" />
   </view>
 
   <!-- 分类标签 -->

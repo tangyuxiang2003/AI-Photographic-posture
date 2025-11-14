@@ -22,7 +22,10 @@ Page({
     currentTagIndex: 0,
     
     // 姿势分组数据（动态从接口获取）
-    poseGroups: []
+    poseGroups: [],
+    
+    // 原始姿势数据（用于搜索过滤）
+    allPoseGroups: []
   },
 
   onLoad() {
@@ -74,7 +77,10 @@ Page({
             }
           }
           
-          this.setData({ poseGroups })
+          this.setData({ 
+            poseGroups,
+            allPoseGroups: poseGroups // 保存原始数据用于搜索
+          })
           console.log('姿势分组数据已加载:', poseGroups)
         } else {
           throw new Error(responseData.msg || '数据格式错误')
@@ -121,32 +127,64 @@ Page({
       }
     ]
     
-    this.setData({ poseGroups })
+    this.setData({ 
+      poseGroups,
+      allPoseGroups: poseGroups // 保存原始数据用于搜索
+    })
   },
 
   // 搜索输入
   onSearchInput(e) {
+    const keyword = e.detail.value
     this.setData({
-      searchKeyword: e.detail.value
+      searchKeyword: keyword
     })
+    
+    // 实时搜索
+    this.performSearch(keyword)
   },
 
   // 搜索确认
   onSearch() {
     const keyword = this.data.searchKeyword.trim()
-    if (!keyword) {
-      wx.showToast({
-        title: '请输入搜索关键词',
-        icon: 'none'
+    this.performSearch(keyword)
+  },
+
+  // 执行模糊搜索
+  performSearch(keyword) {
+    const trimmedKeyword = keyword.trim()
+    
+    // 如果搜索关键词为空，显示所有数据
+    if (!trimmedKeyword) {
+      this.setData({
+        poseGroups: this.data.allPoseGroups
       })
       return
     }
 
-    // TODO: 调用搜索接口
-    wx.showToast({
-      title: `搜索: ${keyword}`,
-      icon: 'none'
+    // 将搜索关键词按空格分割成多个关键词
+    const keywords = trimmedKeyword.toLowerCase().split(/\s+/).filter(k => k)
+    
+    // 过滤姿势分组
+    const filteredGroups = this.data.allPoseGroups.filter(group => {
+      const tagLower = group.tag.toLowerCase()
+      
+      // 检查是否所有关键词都匹配（支持模糊匹配）
+      return keywords.every(kw => tagLower.includes(kw))
     })
+
+    this.setData({
+      poseGroups: filteredGroups
+    })
+
+    // 如果没有搜索结果，显示提示
+    if (filteredGroups.length === 0) {
+      wx.showToast({
+        title: '未找到相关姿势',
+        icon: 'none',
+        duration: 1500
+      })
+    }
   },
 
   // 标签点击

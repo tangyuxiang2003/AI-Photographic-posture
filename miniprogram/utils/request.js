@@ -8,7 +8,7 @@
  */
 const { getAuth, saveAuth } = require('./storage');
 
-const BASE_URL = 'http://172.20.10.2:8080'; // 如需 HTTPS，请改为 https://你的域名
+const BASE_URL = 'http://62.234.12.214:8889'; // 如需 HTTPS，请改为 https://你的域名
 
 // 统一清理本地登录态（token/auth_token 以及持久化的 auth）
 function clearAuthTokens() {
