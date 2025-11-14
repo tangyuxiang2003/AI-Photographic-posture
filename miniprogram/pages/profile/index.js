@@ -421,8 +421,21 @@ Page({
     };
     const { authorizeLogin } = require('../../utils/auth.js');
     authorizeLogin(externalUser)
-      .then(({ mergedUser }) => {
+      .then(({ mergedUser, token }) => {
         console.log('[profile] 登录成功，用户信息:', mergedUser);
+        console.log('[profile] 登录成功，后端返回的 token:', token);
+        
+        // 保存 token，供请求自动注入 Authorization 使用
+        if (typeof token === 'string' && token) {
+          try { wx.setStorageSync('token', token); } catch (e) {}
+          try { wx.setStorageSync('auth_token', token); } catch (e) {}
+          // 使用封装的 setToken，统一注入到 utils/request.js
+          try { require('../../utils/request.js').setToken(token); } catch (e) {}
+        }
+        
+        // 清除游客模式标记
+        try { wx.removeStorageSync('auth_bypassed'); } catch (e) {}
+        
         this.setData({ profile: { ...mergedUser, hasAuth: true } });
         try { wx.setStorageSync('profile_basic', { ...mergedUser, hasAuth: true }); } catch (e) {}
         wx.showToast({ title: '登录成功', icon: 'success' });
