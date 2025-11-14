@@ -9,10 +9,22 @@ Page({
     isTakingPhoto: false, // 是否正在拍照
     generatedImages: [], // 生成的图片列表
     enlargedImage: '', // 当前放大显示的图片
-    isMaxEnlarged: false // 是否处于最大放大状态（3倍）
+    isMaxEnlarged: false, // 是否处于最大放大状态（3倍）
+    referenceImage: '' // 参考图片URL
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 接收参考图片URL参数
+    if (options.referenceImage) {
+      const referenceImage = decodeURIComponent(options.referenceImage);
+      this.setData({ 
+        referenceImage: referenceImage,
+        enlargedImage: referenceImage,
+        isMaxEnlarged: false 
+      });
+      console.log('接收到参考图片:', referenceImage);
+    }
+
     // 申请相机权限
     wx.authorize({
       scope: 'scope.camera',

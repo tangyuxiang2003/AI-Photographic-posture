@@ -260,7 +260,7 @@ Page({
     })
   },
 
-  // 使用按钮点击 - 跳转到自定义功能拍摄界面
+  // 使用按钮点击 - 直接跳转到相机拍摄界面
   onUse(e) {
     const pose = e.currentTarget.dataset.pose
     
@@ -283,17 +283,9 @@ Page({
       return
     }
 
-    // 跳转到自定义功能拍摄界面（analyze页面）
+    // 直接跳转到相机拍摄界面,传递参考图片
     wx.navigateTo({
-      url: '/pages/analyze/index',
-      success: (res) => {
-        // 通过 eventChannel 传递姿势参考图
-        res.eventChannel.emit('startAnalyzePayload', {
-          localPath: pose.url, // 传递姿势图片URL作为参考
-          desc: `参考姿势 ${pose.id}`,
-          textOnly: false
-        })
-      }
+      url: `/pages/camera/index?referenceImage=${encodeURIComponent(pose.url)}`
     })
   },
 

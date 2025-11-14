@@ -1,4 +1,4 @@
-<!-- camera.wxml -->
+ <!-- camera.wxml -->
 <view class="camera-container" bindtap="onScreenTap">
   <!-- 顶部黑色功能区 -->
   <view class="top-controls">
@@ -40,9 +40,14 @@
 
   <!-- 底部黑色功能区 -->
   <view class="bottom-controls" catchtap="stopPropagation">
-    <!-- 生成图片缩略图列表（横向滚动） -->
-    <view class="thumbnail-list" wx:if="{{generatedImages.length > 0}}">
+    <!-- 生成图片缩略图列表（横向滚动） - 包含参考图片 -->
+    <view class="thumbnail-list" wx:if="{{referenceImage || generatedImages.length > 0}}">
       <scroll-view scroll-x="true" class="thumbnail-scroll">
+        <!-- 参考图片缩略图（如果有） -->
+        <view class="thumbnail-item" wx:if="{{referenceImage}}" bindtap="onThumbnailTap" data-url="{{referenceImage}}">
+          <image src="{{referenceImage}}" mode="aspectFill"></image>
+        </view>
+        <!-- 生成的图片缩略图 -->
         <view class="thumbnail-item" wx:for="{{generatedImages}}" wx:key="index" bindtap="onThumbnailTap" data-url="{{item}}">
           <image src="{{item}}" mode="aspectFill"></image>
         </view>

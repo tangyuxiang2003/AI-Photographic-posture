@@ -62,13 +62,13 @@ Page({
     wx.navigateBack()
   },
 
-  // 使用姿势 - 跳转到自定义功能拍摄界面
+  // 使用姿势 - 直接跳转到相机拍摄界面
   onUse() {
     // 检查登录状态
     if (!authUtil.isLoggedIn()) {
       wx.showModal({
         title: '需要授权登录',
-        content: '使用拍照功能需要先授权登录，是否前往授权？',
+        content: '使用拍照功能需要先授权登录,是否前往授权？',
         confirmText: '去授权',
         cancelText: '取消',
         success: (res) => {
@@ -83,17 +83,9 @@ Page({
       return
     }
 
-    // 跳转到自定义功能拍摄界面（analyze页面）
+    // 直接跳转到相机拍摄界面,传递参考图片
     wx.navigateTo({
-      url: '/pages/analyze/index',
-      success: (res) => {
-        // 通过 eventChannel 传递姿势参考图
-        res.eventChannel.emit('startAnalyzePayload', {
-          localPath: this.data.pose.url,
-          desc: `参考姿势 ${this.data.pose.id}`,
-          textOnly: false
-        })
-      }
+      url: `/pages/camera/index?referenceImage=${encodeURIComponent(this.data.pose.url)}`
     })
   },
 
