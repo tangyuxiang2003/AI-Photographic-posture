@@ -162,6 +162,8 @@ Page({
           this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
           // 保存生成的图片到本地存储供相机页面使用
           try { wx.setStorageSync('generated_images', images); } catch(_) {}
+          // 保存aiIdMap到本地存储供preview页面使用
+          try { wx.setStorageSync('aiIdMap', aiIdMap); } catch(_) {}
         } catch (e) {
           try { console.error('[analyze] text-only fail', e); } catch (e4) {}
           this._failout(e && e.message);
@@ -224,6 +226,8 @@ Page({
         this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
         // 保存生成的图片到本地存储供相机页面使用
         try { wx.setStorageSync('generated_images', images); } catch(_) {}
+        // 保存aiIdMap到本地存储供preview页面使用
+        try { wx.setStorageSync('aiIdMap', aiIdMap); } catch(_) {}
       } catch (e) {
         try { console.error('[analyze] fail(single)', e); } catch (e4) {}
         this._failout(e && e.message);
@@ -301,6 +305,8 @@ Page({
       this.setData({ images, aiIdMap, done: true, progress: 100, feedbackText: this._genFeedback(false) });
       // 保存生成的图片到本地存储供相机页面使用
       try { wx.setStorageSync('generated_images', images); } catch(_) {}
+      // 保存aiIdMap到本地存储供preview页面使用
+      try { wx.setStorageSync('aiIdMap', aiIdMap); } catch(_) {}
     } catch (e) {
       console.error(e);
       this._failout(e && e.message);
@@ -370,11 +376,15 @@ Page({
     try { if (list.length > 0) wx.setStorageSync('has_favorited_before', true); } catch(_) {}
     wx.showToast({ title: willFav ? '已收藏' : '已取消', icon: 'none', duration: 800 });
 
-    // 调用后端接口（按你提供的路径）
+    // 调用后端接口
     try {
       const { post } = require('../../utils/request');
       if (willFav) {
-        await post('/api/collection/add', { userId, aiImageId });
+        // 使用 addByAiImageId 接口，只需要传递 aiImageId
+        // userId 会由 request.js 自动注入到请求体中
+        await post('/api/collection/addByAiImageId', { 
+          aiImageId: aiImageId
+        });
       } else {
         await post('/api/collection/remove', { userId, aiImageId });
       }
@@ -514,15 +524,18 @@ Page({
 
       // 追加而非覆盖，保留原图
       const merged = Array.from(new Set([...(this.data.images || []), ...newImages]));
+      const finalAiIdMap = this.data.aiIdMap || {};
       this.setData({
         images: merged,
-        aiIdMap: this.data.aiIdMap || {},
+        aiIdMap: finalAiIdMap,
         done: true,
         refinedPrompt: '',
         feedbackText: this._genFeedback(true)
       });
       // 保存生成的图片到本地存储供相机页面使用
       try { wx.setStorageSync('generated_images', merged); } catch(_) {}
+      // 保存aiIdMap到本地存储供preview页面使用
+      try { wx.setStorageSync('aiIdMap', finalAiIdMap); } catch(_) {}
       wx.showToast({ title: '已生成新图片', icon: 'success' });
     } catch (e) {
       try { console.error('[analyze] refine regenerate error', e); } catch(_) {}

@@ -244,17 +244,17 @@ Page({
       wx.showLoading({ title: '删除中...', mask: true });
       const { post } = require('../../utils/request');
       
-      // 获取当前收藏项的 aiImageId
+      // 获取当前收藏项
       const item = this.data.favorites.find(x => x.id === id);
-      const aiImageId = item?.aiImageId;
       
-      if (!aiImageId) {
+      if (!item) {
         wx.showToast({ title: '数据异常，请刷新后重试', icon: 'none' });
+        wx.hideLoading();
         return;
       }
       
-      // 使用 aiImageId 调用删除接口
-      await post('/api/collection/remove', { aiImageId, userId });
+      // 使用收藏记录的 id 调用删除接口
+      await post('/api/collection/remove', { id, userId });
       
       // 删除成功后重新加载列表
       await this.loadAllFavorites();
@@ -281,38 +281,26 @@ Page({
     wx.showToast({ title: '已为你推荐新顺序', icon: 'none' })
   },
 
-  // 加载所有收藏（本地+服务器）
+  // 加载所有收藏（仅从服务器）
   async loadAllFavorites() {
     try {
-      // 1. 加载本地收藏
-      const localFavorites = wx.getStorageSync('local_favorites') || []
-      
-      // 2. 如果已登录，加载服务器收藏
-      let serverFavorites = []
+      // 如果已登录，加载服务器收藏
       const { hasToken } = require('../../utils/storage')
       if (hasToken && hasToken()) {
-        serverFavorites = await this.fetchServerFavorites()
+        const serverFavorites = await this.fetchServerFavorites()
+        
+        // 规范化并按时间排序
+        const normalized = this.normalizeFavorites(serverFavorites)
+        normalized.sort((a, b) => {
+          const timeA = new Date(a.collectTime).getTime()
+          const timeB = new Date(b.collectTime).getTime()
+          return timeB - timeA // 倒序
+        })
+        
+        this.setData({ favorites: normalized }, this.computeFiltered)
+      } else {
+        this.setData({ favorites: [], filtered: [] })
       }
-      
-      // 3. 合并本地和服务器收藏（去重）
-      const allFavorites = [...localFavorites]
-      const localUrls = new Set(localFavorites.map(item => item.cover))
-      
-      serverFavorites.forEach(item => {
-        if (!localUrls.has(item.cover)) {
-          allFavorites.push(item)
-        }
-      })
-      
-      // 4. 规范化并按时间排序
-      const normalized = this.normalizeFavorites(allFavorites)
-      normalized.sort((a, b) => {
-        const timeA = new Date(a.collectTime).getTime()
-        const timeB = new Date(b.collectTime).getTime()
-        return timeB - timeA // 倒序
-      })
-      
-      this.setData({ favorites: normalized }, this.computeFiltered)
     } catch (e) {
       console.error('[photos] loadAllFavorites failed', e)
       wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
@@ -326,8 +314,7 @@ Page({
       const { hasToken, getAuth } = require('../../utils/storage');
       if (!hasToken()) {
         console.log('[photos] 未登录，无法加载收藏列表');
-        this.setData({ favorites: [], filtered: [] });
-        return;
+        return [];
       }
       
       const auth = (getAuth && getAuth()) || {};
@@ -336,8 +323,7 @@ Page({
 
       if (!userId) {
         console.warn('[photos] userId 无效');
-        this.setData({ favorites: [], filtered: [] });
-        return;
+        return [];
       }
 
       const { get } = require('../../utils/request');
@@ -364,7 +350,7 @@ Page({
         console.log('[photos] 第一条数据示例:', base[0]);
       }
       
-      // 规范化字段：保留收藏记录的 id（collection 表主键）和 aiImageId
+      // 规范化字段：区分 AI 生成图和参考图
       const normalized = this.normalizeFavorites(base.map(x => {
         // 处理标签：后端可能返回字符串或数组
         let tags = [];
@@ -378,22 +364,58 @@ Page({
           tags = x.tag.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
         }
         
+        // 根据是否有 referenceImageId 判断类型
+        const isReference = !!x.referenceImageId;
+        
+        // 智能选择 URL：优先使用对应类型的 URL，然后尝试其他字段
+        let coverUrl = '';
+        if (isReference) {
+          // 参考图优先级：referenceImageUrl > url > imageUrl > cover > aiImageUrl
+          coverUrl = x.referenceImageUrl || x.url || x.imageUrl || x.cover || x.aiImageUrl || '';
+        } else {
+          // AI 生成图优先级：aiImageUrl > url > imageUrl > cover > referenceImageUrl
+          coverUrl = x.aiImageUrl || x.url || x.imageUrl || x.cover || x.referenceImageUrl || '';
+        }
+        
         const item = {
           id: x.id,  // 收藏记录的主键 ID
-          aiImageId: x.aiImageId,  // AI 图片 ID
-          title: x.title || 'AI生成图',
-          cover: x.aiImageUrl || x.imageUrl || x.cover || x.url,
+          aiImageId: x.aiImageId,  // AI 图片 ID（AI生成图）
+          referenceImageId: x.referenceImageId,  // 参考图 ID（姿势厅图片）
+          title: x.title || (isReference ? '参考姿势' : 'AI生成图'),
+          cover: coverUrl,
           tags: tags,
-          type: x.type || 'AI',
+          type: isReference ? 'Reference' : 'AI',
           collectTime: x.collectTime || x.createdAt || x.createTime || new Date().toISOString()
         };
-        console.log('[photos] 规范化数据:', { 原始: x, 规范化: item });
+        
+        // 如果 cover 为空，记录警告
+        if (!item.cover) {
+          console.warn('[photos] 收藏项缺少图片 URL:', x);
+        }
+        
+        console.log('[photos] 规范化数据:', { 
+          原始: x, 
+          规范化: item,
+          类型: isReference ? '参考图' : 'AI生成图',
+          URL来源: isReference 
+            ? (x.referenceImageUrl ? 'referenceImageUrl' : x.url ? 'url' : x.imageUrl ? 'imageUrl' : x.cover ? 'cover' : 'aiImageUrl')
+            : (x.aiImageUrl ? 'aiImageUrl' : x.url ? 'url' : x.imageUrl ? 'imageUrl' : x.cover ? 'cover' : 'referenceImageUrl')
+        });
         return item;
       }));
       
-      console.log('[photos] 规范化后数量:', normalized.length)
+      // 过滤掉没有图片 URL 的收藏项
+      const validItems = normalized.filter(item => {
+        if (!item.cover) {
+          console.warn('[photos] 过滤掉无效收藏项（缺少图片）:', item);
+          return false;
+        }
+        return true;
+      });
       
-      return normalized
+      console.log('[photos] 规范化后数量:', normalized.length, '有效数量:', validItems.length);
+      
+      return validItems
     } catch (e) {
       console.error('[photos] fetchServerFavorites failed', e)
       return []

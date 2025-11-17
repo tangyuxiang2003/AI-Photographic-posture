@@ -27,7 +27,7 @@
         <view wx:if="{{isLoggedIn}}" class="favorite-btn" catchtap="onToggleFavorite" data-pose="{{item}}">
           <image 
             class="favorite-icon" 
-            src="{{favoriteMap[item.url] ? '/images/icons/heart-filled.svg' : '/images/icons/heart.svg'}}" 
+            src="{{favoriteMap[item.id] ? '/images/icons/heart-filled.svg' : '/images/icons/heart.svg'}}" 
             mode="aspectFit" 
           />
         </view>

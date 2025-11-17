@@ -52,22 +52,49 @@ Page({
     this.setData({ isLoggedIn })
   },
 
-  // 加载收藏状态
-  loadFavorites() {
+  // 加载收藏状态（从服务器获取）
+  async loadFavorites() {
     try {
-      // 从本地收藏列表中加载（支持完整数据结构）
-      const localFavorites = wx.getStorageSync('local_favorites') || []
+      const authUtil = require('../../utils/auth')
+      if (!authUtil.isLoggedIn()) {
+        this.setData({ favoriteMap: {} })
+        return
+      }
+
+      const { get } = require('../../utils/request')
+      const { getAuth } = require('../../utils/storage')
+      const auth = getAuth() || {}
+      const userId = auth.userId
+
+      if (!userId) {
+        this.setData({ favoriteMap: {} })
+        return
+      }
+
+      // 调用后端接口获取收藏列表
+      const resp = await get('/api/collection/list', { userId })
+      
+      let responseData = resp?.data
+      if (typeof responseData === 'string') {
+        try { responseData = JSON.parse(responseData) } catch(e) {}
+      }
+      
+      const items = responseData?.data || []
       const favoriteMap = {}
-      localFavorites.forEach(item => {
-        // 兼容旧格式（纯URL）和新格式（对象）
-        const url = typeof item === 'string' ? item : item.cover
-        if (url) {
-          favoriteMap[url] = true
+      
+      // 遍历收藏列表,建立 referenceImageId -> true 的映射
+      items.forEach(item => {
+        if (item.referenceImageId) {
+          // 参考图收藏,使用 referenceImageId 作为 key
+          favoriteMap[item.referenceImageId] = true
         }
       })
+      
       this.setData({ favoriteMap })
+      console.log('[gallery] 收藏状态已加载:', favoriteMap)
     } catch (error) {
       console.error('加载收藏状态失败:', error)
+      this.setData({ favoriteMap: {} })
     }
   },
 
@@ -311,116 +338,99 @@ Page({
 
     const pose = e.currentTarget.dataset.pose
     const group = e.currentTarget.dataset.group
+    const referenceImageId = pose.id
     
     try {
-      // 使用新的本地收藏列表（支持完整数据结构）
-      let localFavorites = wx.getStorageSync('local_favorites') || []
+      const { post } = require('../../utils/request')
+      const { getAuth } = require('../../utils/storage')
+      const auth = getAuth() || {}
+      const userId = auth.userId
       
-      // 查找是否已收藏
-      const index = localFavorites.findIndex(item => {
-        const url = typeof item === 'string' ? item : item.cover
-        return url === pose.url
-      })
+      // 检查是否已收藏
+      const isFavorited = this.data.favoriteMap[referenceImageId]
       
-      if (index > -1) {
+      if (isFavorited) {
         // 已收藏，取消收藏
-        const favoriteItem = localFavorites[index]
-        localFavorites.splice(index, 1)
+        wx.showLoading({ title: '取消中...', mask: true })
         
-        // 调用后端删除接口
-        if (favoriteItem.aiImageId) {
-          try {
-            wx.showLoading({ title: '删除中...', mask: true })
-            const { post } = require('../../utils/request')
-            const { getAuth } = require('../../utils/storage')
-            const auth = getAuth() || {}
-            const userId = auth.userId
-            
-            await post('/api/collection/remove', { 
-              aiImageId: favoriteItem.aiImageId,
-              userId 
-            })
-            wx.hideLoading()
-          } catch (err) {
-            console.error('后端删除收藏失败:', err)
-            wx.hideLoading()
-          }
-        }
-        
-        wx.showToast({
-          title: '已取消收藏',
-          icon: 'success',
-          duration: 1500
-        })
-      } else {
-        // 未收藏，添加收藏（保存完整数据结构）
-        const favoriteItem = {
-          id: `local_${Date.now()}_${pose.id}`, // 本地收藏ID
-          aiImageId: pose.id, // 姿势ID
-          title: group ? group.tag : '参考姿势',
-          cover: pose.url,
-          tags: group ? [group.tag] : [],
-          type: 'Reference', // 参考图类型
-          collectTime: new Date().toISOString()
-        }
-        
-        localFavorites.push(favoriteItem)
-        
-        // 调用后端接口保存收藏
         try {
-          wx.showLoading({ title: '收藏中...', mask: true })
-          const { post } = require('../../utils/request')
-          const { getAuth } = require('../../utils/storage')
-          const auth = getAuth() || {}
-          const userId = auth.userId
+          await post('/api/collection/remove', { 
+            id: referenceImageId,
+            userId 
+          })
           
-          const response = await post('/api/collection/add', {
-            aiImageId: pose.id,
-            aiImageUrl: pose.url,
-            title: group ? group.tag : '参考姿势',
-            tag: group ? group.tag : '',
-            type: 'Reference',
+          wx.hideLoading()
+          wx.showToast({
+            title: '已取消收藏',
+            icon: 'success',
+            duration: 1500
+          })
+          
+          // 更新收藏状态
+          await this.loadFavorites()
+        } catch (err) {
+          console.error('取消收藏失败:', err)
+          wx.hideLoading()
+          wx.showToast({
+            title: '取消失败，请稍后重试',
+            icon: 'none',
+            duration: 2000
+          })
+        }
+      } else {
+        // 未收藏，添加收藏
+        wx.showLoading({ title: '收藏中...', mask: true })
+        
+        try {
+          const response = await post('/api/collection/addByReferenceImageId', {
+            referenceImageId: referenceImageId,
             userId
           })
           
           console.log('[gallery] 收藏响应:', response)
           
-          // 解析响应获取后端返回的收藏ID
+          // 解析响应
           let responseData = response?.data
           if (typeof responseData === 'string') {
             try { responseData = JSON.parse(responseData) } catch(e) {}
           }
           
-          // 更新本地收藏项的ID为后端返回的ID
-          if (responseData?.data?.id) {
-            favoriteItem.id = responseData.data.id
-            localFavorites[localFavorites.length - 1] = favoriteItem
-          }
+          wx.hideLoading()
           
-          wx.hideLoading()
-          wx.showToast({
-            title: '收藏成功',
-            icon: 'success',
-            duration: 1500
-          })
+          // 检查是否是重复收藏
+          if (responseData?.code === 400 || responseData?.msg?.includes('已收藏') || responseData?.msg?.includes('已存在')) {
+            wx.showToast({
+              title: '此照片已在收藏列表中',
+              icon: 'none',
+              duration: 2000
+            })
+            // 更新收藏状态，确保爱心显示正确
+            await this.loadFavorites()
+          } else if (responseData?.code === 200) {
+            wx.showToast({
+              title: '收藏成功',
+              icon: 'success',
+              duration: 1500
+            })
+            // 更新收藏状态
+            await this.loadFavorites()
+          } else {
+            throw new Error(responseData?.msg || '收藏失败')
+          }
         } catch (err) {
-          console.error('后端收藏失败:', err)
+          console.error('收藏失败:', err)
           wx.hideLoading()
+          
+          // 统一提示：此图已在收藏列表
           wx.showToast({
-            title: '收藏失败，请稍后重试',
+            title: '此图已在收藏列表',
             icon: 'none',
             duration: 2000
           })
-          // 收藏失败时从本地列表中移除
-          localFavorites.pop()
+          // 更新收藏状态，确保爱心显示正确
+          await this.loadFavorites()
         }
       }
-      
-      // 保存到本地存储
-      wx.setStorageSync('local_favorites', localFavorites)
-      
-      // 更新收藏状态
-      this.loadFavorites()
     } catch (error) {
       console.error('收藏操作失败:', error)
       wx.showToast({
