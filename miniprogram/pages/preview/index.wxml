@@ -1,15 +1,6 @@
 <view class="preview-page">
   <image class="preview-image" src="{{imagePath}}" mode="widthFix" bindtap="onOpenPreview"></image>
   
-  <!-- 收藏按钮（仅登录用户可见） -->
-  <view wx:if="{{isLoggedIn}}" class="favorite-btn" bindtap="onToggleFavorite">
-    <image 
-      class="favorite-icon" 
-      src="{{isFavorite ? '/images/icons/heart-filled.svg' : '/images/icons/heart.svg'}}" 
-      mode="aspectFit" 
-    />
-  </view>
-  
   <view class="bottom-bar">
     <button class="bar-btn" bindtap="onSave">保存到相册</button>
     <button class="bar-btn" bindtap="onRetake">重新拍摄</button>

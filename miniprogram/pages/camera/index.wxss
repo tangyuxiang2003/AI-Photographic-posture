@@ -59,6 +59,10 @@
   margin-top: 20px;
   margin-left: 60px;
 }
+.live-control {
+  margin-top: 20px;
+  margin-left: 60px;
+}
 
 /* 倒计时开关的视觉状态：开启时高亮，图片取消灰度 */
 .timer-control image {

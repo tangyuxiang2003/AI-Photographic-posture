@@ -12,6 +12,10 @@
         <image src="/images/timer-off.png" mode="widthFix"></image>
         <text class="timer-text">{{timerEnabled ? timerSeconds + 's' : ''}}</text>
       </view>
+      <!-- 实况控制 -->
+      <view class="control-icon live-control" bindtap="toggleLive">
+        <image src="{{liveEnabled ? '/images/live-on.png' : '/images/live-off.png'}}" mode="widthFix"></image>
+      </view>
     </view>
   </view>
 

@@ -168,12 +168,6 @@ Page({
       });
   },
 
-  // 覆盖层按钮：暂不授权，先逛逛
-  onAuthSkip() {
-    try { wx.setStorageSync('auth_bypassed', true) } catch (e) {}
-    this.setData({ authBypassed: true, showAuthOverlay: false })
-  },
-
 
 
   onDescInput(e) {

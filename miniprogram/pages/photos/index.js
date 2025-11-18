@@ -11,6 +11,46 @@ Page({
     editingTags: ''
   },
 
+  /**
+   * 解析日期字符串，兼容 iOS
+   * iOS 只支持特定格式：yyyy/MM/dd、yyyy-MM-dd、yyyy-MM-ddTHH:mm:ss 等
+   * @param {string|Date} dateStr - 日期字符串或 Date 对象
+   * @returns {Date} Date 对象
+   */
+  parseDate(dateStr) {
+    if (!dateStr) return new Date();
+    if (dateStr instanceof Date) return dateStr;
+    
+    // 如果是 ISO 格式或标准格式，直接解析
+    if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(dateStr)) {
+      return new Date(dateStr);
+    }
+    
+    // 处理类似 "Fri Nov 07 10:05:23 CST 2025" 的格式
+    // 这种格式在 iOS 上不支持，需要转换
+    const match = dateStr.match(/(\w{3})\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+\w+\s+(\d{4})/);
+    if (match) {
+      const months = {
+        Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+        Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+      };
+      const [, , monthStr, day, hour, minute, second, year] = match;
+      const month = months[monthStr];
+      if (month !== undefined) {
+        return new Date(year, month, day, hour, minute, second);
+      }
+    }
+    
+    // 兜底：尝试直接解析，如果失败返回当前时间
+    try {
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? new Date() : date;
+    } catch (e) {
+      console.warn('[photos] 日期解析失败:', dateStr, e);
+      return new Date();
+    }
+  },
+
   // 预处理：为每条收藏预计算 searchText，减少筛选时字符串拼接与大小写转换
   normalizeFavorites(arr = []){
     return (arr || []).map(it => ({
@@ -292,19 +332,35 @@ Page({
         // 规范化并按时间排序
         const normalized = this.normalizeFavorites(serverFavorites)
         normalized.sort((a, b) => {
-          const timeA = new Date(a.collectTime).getTime()
-          const timeB = new Date(b.collectTime).getTime()
+          const timeA = this.parseDate(a.collectTime).getTime()
+          const timeB = this.parseDate(b.collectTime).getTime()
           return timeB - timeA // 倒序
         })
         
         this.setData({ favorites: normalized }, this.computeFiltered)
+        
+        // 同步到本地存储，供个人中心统计使用
+        try {
+          wx.setStorageSync('app_favorites', normalized)
+          console.log('[photos] 已同步收藏到本地存储，数量:', normalized.length)
+        } catch (err) {
+          console.error('[photos] 同步本地存储失败:', err)
+        }
       } else {
         this.setData({ favorites: [], filtered: [] })
+        // 未登录时清空本地存储
+        try {
+          wx.setStorageSync('app_favorites', [])
+        } catch (err) {}
       }
     } catch (e) {
       console.error('[photos] loadAllFavorites failed', e)
       wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
       this.setData({ favorites: [], filtered: [] })
+      // 加载失败时也清空本地存储
+      try {
+        wx.setStorageSync('app_favorites', [])
+      } catch (err) {}
     }
   },
 

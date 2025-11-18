@@ -76,8 +76,6 @@
       <view class="auth-title">需要你的授权</view>
       <view class="auth-sub">登录后可保存头像昵称，并顺畅使用上传与分析功能</view>
       <button class="btn primary" bindtap="onAuthAgree">一键登录</button>
-
-      <button class="btn ghost" bindtap="onAuthSkip">暂不授权，先逛逛</button>
     </view>
   </view>
 </view>

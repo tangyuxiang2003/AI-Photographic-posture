@@ -10,7 +10,9 @@ Page({
     generatedImages: [], // 生成的图片列表
     enlargedImage: '', // 当前放大显示的图片
     isMaxEnlarged: false, // 是否处于最大放大状态（3倍）
-    referenceImage: '' // 参考图片URL
+    referenceImage: '', // 参考图片URL
+    liveEnabled: false, // 实况模式默认关闭
+    cameraContext: null // 相机上下文
   },
 
   onLoad(options) {
@@ -166,6 +168,13 @@ Page({
     });
   },
 
+  // 切换实况模式
+  toggleLive() {
+    this.setData({
+      liveEnabled: !this.data.liveEnabled
+    });
+  },
+
   // 拍照
   takePhoto() {
     if (this.data.isTakingPhoto) return;
@@ -173,35 +182,117 @@ Page({
     const ctx = wx.createCameraContext();
     this.setData({ isTakingPhoto: true });
     
-    // 如果开启了倒计时
-    if (this.data.timerEnabled) {
-      let seconds = this.data.timerSeconds;
-      
-      // 显示倒计时提示
-      wx.showToast({
-        title: `将在${seconds}秒后拍摄`,
-        icon: 'none',
-        duration: seconds * 1000
-      });
-      
-      // 倒计时逻辑
-      this.data.countdown = setInterval(() => {
-        seconds--;
-        if (seconds <= 0) {
-          clearInterval(this.data.countdown);
-          this.realTakePhoto(ctx);
-        } else {
-          wx.showToast({
-            title: `将在${seconds}秒后拍摄`,
-            icon: 'none',
-            duration: 1000
-          });
-        }
-      }, 1000);
+    // 如果开启了实况模式
+    if (this.data.liveEnabled) {
+      // 如果开启了倒计时
+      if (this.data.timerEnabled) {
+        let seconds = this.data.timerSeconds;
+        
+        wx.showToast({
+          title: `将在${seconds}秒后拍摄实况`,
+          icon: 'none',
+          duration: seconds * 1000
+        });
+        
+        this.data.countdown = setInterval(() => {
+          seconds--;
+          if (seconds <= 0) {
+            clearInterval(this.data.countdown);
+            this.takeLivePhoto(ctx);
+          } else {
+            wx.showToast({
+              title: `将在${seconds}秒后拍摄实况`,
+              icon: 'none',
+              duration: 1000
+            });
+          }
+        }, 1000);
+      } else {
+        this.takeLivePhoto(ctx);
+      }
     } else {
-      // 直接拍照
-      this.realTakePhoto(ctx);
+      // 普通拍照模式
+      if (this.data.timerEnabled) {
+        let seconds = this.data.timerSeconds;
+        
+        wx.showToast({
+          title: `将在${seconds}秒后拍摄`,
+          icon: 'none',
+          duration: seconds * 1000
+        });
+        
+        this.data.countdown = setInterval(() => {
+          seconds--;
+          if (seconds <= 0) {
+            clearInterval(this.data.countdown);
+            this.realTakePhoto(ctx);
+          } else {
+            wx.showToast({
+              title: `将在${seconds}秒后拍摄`,
+              icon: 'none',
+              duration: 1000
+            });
+          }
+        }, 1000);
+      } else {
+        this.realTakePhoto(ctx);
+      }
     }
+  },
+
+  // 实况拍照
+  takeLivePhoto(ctx) {
+    // 开始录像（1.5秒）
+    ctx.startRecord({
+      success: () => {
+        // 1.5秒后停止录制
+        setTimeout(() => {
+          ctx.stopRecord({
+            success: (res) => {
+              const tempVideoPath = res.tempVideoPath;
+              
+              // 保存实况视频到相册
+              wx.saveVideoToPhotosAlbum({
+                filePath: tempVideoPath,
+                success: () => {
+                  wx.showToast({
+                    title: '实况已保存到相册',
+                    icon: 'success',
+                    duration: 2000
+                  });
+                },
+                fail: (err) => {
+                  console.error('保存实况失败', err);
+                  wx.showToast({
+                    title: '保存实况失败',
+                    icon: 'none'
+                  });
+                },
+                complete: () => {
+                  this.setData({ isTakingPhoto: false });
+                }
+              });
+            },
+            fail: (err) => {
+              console.error('停止录制失败', err);
+              wx.showToast({
+                title: '录制失败',
+                icon: 'none'
+              });
+              this.setData({ isTakingPhoto: false });
+            }
+          });
+        }, 1500); // 1.5秒
+      },
+      fail: (err) => {
+        console.error('开始录制失败', err);
+        wx.showToast({
+          title: '录制失败',
+          icon: 'none'
+        });
+        this.setData({ isTakingPhoto: false });
+      }
+    });
   },
 
   // 实际拍照操作
