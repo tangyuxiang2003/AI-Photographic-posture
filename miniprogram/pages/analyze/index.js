@@ -1,4 +1,4 @@
-const BASE_URL = 'http://62.234.12.214:8889'; // 开发环境：IP:端口；真机发布需换为 HTTPS 域名
+const BASE_URL = 'https://ai.biohelix.cn'; // 开发环境：IP:端口；真机发布需换为 HTTPS 域名
 // 统一读取两个可能的存储键：'auth_token' 与 'token'
 
 function getAuthHeader() {
