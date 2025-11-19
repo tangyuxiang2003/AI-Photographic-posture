@@ -11,18 +11,20 @@
     <image class="search-icon" src="/images/icons/search.svg" mode="aspectFit" bindtap="onSearch" />
   </view>
 
-  <!-- 分类标签 -->
-  <scroll-view class="category-tags" scroll-x enable-flex>
-    <view 
-      wx:for="{{categoryTags}}" 
-      wx:key="id"
-      class="tag-item {{currentTagIndex === index ? 'active' : ''}}"
-      bindtap="onTagTap"
-      data-index="{{index}}"
-    >
-      {{item.name}}
-    </view>
-  </scroll-view>
+  <!-- 快捷搜索标签 -->
+  <view class="quick-tags" wx:if="{{quickSearchTags.length > 0}}">
+    <scroll-view class="quick-tags-scroll" scroll-x enable-flex>
+      <view 
+        wx:for="{{quickSearchTags}}" 
+        wx:key="index"
+        class="quick-tag-item"
+        bindtap="onQuickTagTap"
+        data-tag="{{item}}"
+      >
+        {{item}}
+      </view>
+    </scroll-view>
+  </view>
 
   <!-- 姿势列表 -->
   <scroll-view class="pose-list" scroll-y>

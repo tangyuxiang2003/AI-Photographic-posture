@@ -450,9 +450,14 @@ Page({
         }
         
         console.log('[photos] 规范化数据:', { 
-          原始: x, 
-          规范化: item,
-          类型: isReference ? '参考图' : 'AI生成图',
+          原始数据: x,
+          规范化后: item,
+          判断依据: {
+            referenceImageId: x.referenceImageId,
+            aiImageId: x.aiImageId,
+            判断为参考图: !!x.referenceImageId,
+            最终类型: isReference ? '姿势厅(Reference)' : 'AI生图(AI)'
+          },
           URL来源: isReference 
             ? (x.referenceImageUrl ? 'referenceImageUrl' : x.url ? 'url' : x.imageUrl ? 'imageUrl' : x.cover ? 'cover' : 'aiImageUrl')
             : (x.aiImageUrl ? 'aiImageUrl' : x.url ? 'url' : x.imageUrl ? 'imageUrl' : x.cover ? 'cover' : 'referenceImageUrl')

@@ -20,32 +20,18 @@
       <view class="card">
         <image class="cover" src="{{item.cover}}" mode="aspectFill" data-url="{{item.cover}}" bindtap="onPreviewImage"></image>
         <view class="info">
-          <view class="title">{{item.title}}</view>
+          <!-- 风格标签（所有图片都显示） -->
           <view class="tags">
+            <text class="tag-label">风格：</text>
             <text class="tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
+            <text class="tag-empty" wx:if="{{!item.tags || item.tags.length === 0}}">未设置</text>
           </view>
           <view class="actions">
             <button class="btn unfav" data-id="{{item.id}}" bindtap="onToggleFavorite">取消收藏</button>
             <button class="btn share" data-id="{{item.id}}" open-type="share">分享</button>
             <button class="btn edit" data-id="{{item.id}}" bindtap="onOpenTagEditor">编辑风格</button>
           </view>
-          <!-- 标签编辑弹层 -->
-  <view wx:if="{{showTagEditor}}">
-    <view class="mask" bindtap="onCloseTagEditor"></view>
-    <view class="sheet">
-      <view class="sheet-title">编辑风格标签</view>
-      <view class="sheet-tip">用逗号分隔多个标签，如：韩系, 花墙, 回眸</view>
-      <input class="sheet-input"
-             placeholder="输入标签，逗号分隔"
-             value="{{editingTags}}"
-             bindinput="onEditTagsInput" />
-      <view class="sheet-actions">
-        <button class="sheet-btn cancel" bindtap="onCloseTagEditor">取消</button>
-        <button class="sheet-btn save" bindtap="onSaveTags">保存</button>
-      </view>
-    </view>
-  </view>
-</view>
+        </view>
       </view>
     </block>
   </view>
@@ -61,5 +47,22 @@
     <view class="empty-title">还没有收藏</view>
     <view class="empty-tip">去首页挑选姿势建议，点击收藏即可在这里查看哦～</view>
     <navigator class="go-home" open-type="switchTab" url="/pages/index/index">去首页看看</navigator>
+  </view>
+
+  <!-- 标签编辑弹层 -->
+  <view wx:if="{{showTagEditor}}">
+    <view class="mask" bindtap="onCloseTagEditor"></view>
+    <view class="sheet">
+      <view class="sheet-title">编辑风格</view>
+      <view class="sheet-tip">用逗号分隔多个风格标签，如：韩系, 花墙, 回眸</view>
+      <input class="sheet-input"
+             placeholder="输入标签，逗号分隔"
+             value="{{editingTags}}"
+             bindinput="onEditTagsInput" />
+      <view class="sheet-actions">
+        <button class="sheet-btn cancel" bindtap="onCloseTagEditor">取消</button>
+        <button class="sheet-btn save" bindtap="onSaveTags">保存</button>
+      </view>
+    </view>
   </view>
 </view>

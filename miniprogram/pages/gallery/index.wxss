@@ -42,28 +42,33 @@
   opacity: 0.6;
 }
 
-/* 分类标签 */
-.category-tags {
-  white-space: nowrap;
-  padding: 20rpx 24rpx;
+/* 快捷搜索标签 */
+.quick-tags {
   background: #fff;
-  margin-bottom: 16rpx;
+  padding: 16rpx 24rpx 8rpx;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
-.tag-item {
+.quick-tags-scroll {
+  white-space: nowrap;
+}
+
+.quick-tag-item {
   display: inline-block;
-  padding: 12rpx 32rpx;
-  margin-right: 16rpx;
-  background: #f5f5f5;
-  border-radius: 32rpx;
-  font-size: 28rpx;
-  color: #666;
+  padding: 10rpx 24rpx;
+  margin-right: 12rpx;
+  margin-bottom: 8rpx;
+  background: linear-gradient(135deg, #FFF5E6 0%, #FFE8CC 100%);
+  border: 1rpx solid #FFD699;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  color: #FF8C00;
   transition: all 0.3s;
 }
 
-.tag-item.active {
-  background: #333;
-  color: #fff;
+.quick-tag-item:active {
+  transform: scale(0.95);
+  background: linear-gradient(135deg, #FFE8CC 0%, #FFD699 100%);
 }
 
 /* 姿势列表 */

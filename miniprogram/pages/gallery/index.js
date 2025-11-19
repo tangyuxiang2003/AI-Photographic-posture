@@ -6,6 +6,9 @@ Page({
     // 搜索关键词
     searchKeyword: '',
     
+    // 快捷搜索标签
+    quickSearchTags: [],
+    
     // 分类标签
     categoryTags: [
       { id: 1, name: '浪漫满屋' },
@@ -147,6 +150,8 @@ Page({
             poseGroups,
             allPoseGroups: poseGroups // 保存原始数据用于搜索
           })
+          // 提取快捷搜索标签
+          this.extractQuickTags()
           console.log('姿势分组数据已加载:', poseGroups)
         } else {
           throw new Error(responseData.msg || '数据格式错误')
@@ -197,6 +202,22 @@ Page({
       poseGroups,
       allPoseGroups: poseGroups // 保存原始数据用于搜索
     })
+    // 提取快捷搜索标签
+    this.extractQuickTags()
+  },
+
+  // 提取快捷搜索标签
+  extractQuickTags() {
+    const tags = new Set()
+    this.data.allPoseGroups.forEach(group => {
+      if (group.tag) {
+        tags.add(group.tag)
+      }
+    })
+    this.setData({
+      quickSearchTags: Array.from(tags).slice(0, 10) // 最多显示10个
+    })
+    console.log('快捷搜索标签已提取:', this.data.quickSearchTags)
   },
 
   // 搜索输入
@@ -251,6 +272,16 @@ Page({
         duration: 1500
       })
     }
+  },
+
+  // 快捷标签点击
+  onQuickTagTap(e) {
+    const tag = e.currentTarget.dataset.tag
+    this.setData({
+      searchKeyword: tag
+    })
+    this.performSearch(tag)
+    console.log('点击快捷标签:', tag)
   },
 
   // 标签点击
