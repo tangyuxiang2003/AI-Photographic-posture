@@ -21,21 +21,21 @@
   },
   "tabBar": {
     "color": "#666666",
-    "selectedColor": "#07C160",
-    "borderStyle": "black",
+    "selectedColor": "#1890FF",
     "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
     "list": [
       {
         "pagePath": "pages/index/index",
         "text": "首页",
-        "iconPath": "images/icons/home.png",
-        "selectedIconPath": "images/icons/home-active.png"
+        "iconPath": "images/gallery.png",
+        "selectedIconPath": "images/gallery-active.png"
       },
       {
         "pagePath": "pages/gallery/index",
         "text": "姿势厅",
-        "iconPath": "images/icons/examples.png",
-        "selectedIconPath": "images/icons/examples-active.png"
+        "iconPath": "images/姿势厅-off.png",
+        "selectedIconPath": "images/姿势厅-on.png"
       },
       {
         "pagePath": "pages/photos/index",
@@ -46,8 +46,8 @@
       {
         "pagePath": "pages/profile/index",
         "text": "个人中心",
-        "iconPath": "images/icons/usercenter.png",
-        "selectedIconPath": "images/icons/usercenter-active.png"
+        "iconPath": "images/个人中心-off.png",
+        "selectedIconPath": "images/个人中心-on.png"
       }
     ]
   },
