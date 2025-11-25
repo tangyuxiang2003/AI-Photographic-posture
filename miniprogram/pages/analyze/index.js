@@ -555,7 +555,7 @@ Page({
     }
     const desc = (this.data.refinedPrompt || '').trim();
     wx.navigateTo({
-      url: '/pages/camera/index',
+      url: '/pages/camera/index?source=generated',
       events: {
         photoTaken: ({ tempFilePath }) => {
           if (tempFilePath) this.startAnalyze(tempFilePath, desc, undefined);

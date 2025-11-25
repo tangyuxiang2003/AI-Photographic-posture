@@ -4,6 +4,7 @@
     "pages/analyze/index",
     "pages/camera/index",
     "pages/preview/index",
+    "pages/video-preview/index",
     "pages/photos/index",
     "pages/gallery/index",
     "pages/category-detail/category-detail",
@@ -53,5 +54,16 @@
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.record": {
+      "desc": "需要使用你的录音功能进行实况拍摄"
+    },
+    "scope.writePhotosAlbum": {
+      "desc": "需要使用你的相册保存功能"
+    },
+    "scope.camera": {
+      "desc": "需要使用你的相机功能"
+    }
+  }
 }

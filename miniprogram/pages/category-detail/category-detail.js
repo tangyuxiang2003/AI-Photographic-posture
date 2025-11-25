@@ -194,7 +194,7 @@ Page({
 
     // 直接跳转到相机拍摄界面,传递参考图片
     wx.navigateTo({
-      url: `/pages/camera/index?referenceImage=${encodeURIComponent(pose.url)}`
+      url: `/pages/camera/index?referenceImage=${encodeURIComponent(pose.url)}&source=reference`
     })
   },
 

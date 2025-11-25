@@ -1,0 +1,24 @@
+<!-- video-preview.wxml -->
+<view class="preview-container">
+  <!-- 视频播放器 -->
+  <video 
+    class="video-player"
+    src="{{videoPath}}"
+    autoplay
+    loop
+    show-center-play-btn="{{false}}"
+    show-play-btn="{{false}}"
+    enable-progress-gesture="{{false}}"
+    object-fit="contain"
+  ></video>
+
+  <!-- 底部操作按钮 -->
+  <view class="action-buttons">
+    <view class="btn cancel-btn" bindtap="cancel">
+      <text>取消</text>
+    </view>
+    <view class="btn save-btn" bindtap="saveToAlbum">
+      <text>保存到相册</text>
+    </view>
+  </view>
+</view>

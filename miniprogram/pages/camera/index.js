@@ -12,25 +12,36 @@ Page({
     isMaxEnlarged: false, // 是否处于最大放大状态（3倍）
     referenceImage: '', // 参考图片URL
     liveEnabled: false, // 实况模式默认关闭
-    cameraContext: null // 相机上下文
+    cameraContext: null, // 相机上下文
+    source: 'reference', // 来源：reference(姿势厅) 或 generated(AI生成)
+    isRecording: false, // 是否正在录制
+    recordTimer: null // 录制计时器
   },
 
   onLoad(options) {
+    // 判断来源
+    const source = options.source || (options.referenceImage ? 'reference' : 'generated');
+    
     // 接收参考图片URL参数
     if (options.referenceImage) {
       const referenceImage = decodeURIComponent(options.referenceImage);
       this.setData({ 
         referenceImage: referenceImage,
         enlargedImage: referenceImage,
-        isMaxEnlarged: false 
+        isMaxEnlarged: false,
+        source: source
       }, () => {
-        // 在设置参考图片后再加载生成的图片，确保过滤逻辑正确执行
+        // 根据来源决定是否加载生成的图片
+        if (source === 'generated') {
+          this.loadGeneratedImages();
+        }
+      });
+      console.log('接收到参考图片:', referenceImage, '来源:', source);
+    } else {
+      // 没有参考图片，来源必定是 generated
+      this.setData({ source: 'generated' }, () => {
         this.loadGeneratedImages();
       });
-      console.log('接收到参考图片:', referenceImage);
-    } else {
-      // 没有参考图片时也加载生成的图片
-      this.loadGeneratedImages();
     }
 
     // 申请相机权限
@@ -55,6 +66,28 @@ Page({
       }
     });
 
+    // 申请录音权限（实况录制需要）
+    wx.authorize({
+      scope: 'scope.record',
+      success: () => {
+        console.log('录音权限已获取');
+      },
+      fail: () => {
+        console.log('录音权限获取失败，实况功能可能无法使用');
+      }
+    });
+
+    // 申请保存到相册权限
+    wx.authorize({
+      scope: 'scope.writePhotosAlbum',
+      success: () => {
+        console.log('相册写入权限已获取');
+      },
+      fail: () => {
+        console.log('相册写入权限获取失败');
+      }
+    });
+
   },
 
   onShow() {
@@ -64,6 +97,13 @@ Page({
 
   // 加载生成的图片
   loadGeneratedImages() {
+    // 只有来源是 generated 时才加载生成的图片
+    if (this.data.source !== 'generated') {
+      console.log('来源是姿势厅，不加载生成图片');
+      this.setData({ generatedImages: [] });
+      return;
+    }
+    
     try {
       const images = wx.getStorageSync('generated_images') || [];
       // 过滤掉空值、无效数据和与参考图片重复的数据
@@ -160,7 +200,14 @@ Page({
         if (next === 'on') {
           wx.showToast({
             title: '闪光灯已打开',
-            icon: 'none'
+            icon: 'none',
+            duration: 1500
+          });
+        } else {
+          wx.showToast({
+            title: '闪光灯已关闭',
+            icon: 'none',
+            duration: 1500
           });
         }
       });
@@ -253,55 +300,110 @@ Page({
 
   // 实况拍照
   takeLivePhoto(ctx) {
-    // 开始录像（1.5秒）
-    ctx.startRecord({
-      success: () => {
-        // 1.5秒后停止录制
-        setTimeout(() => {
-          ctx.stopRecord({
-            success: (res) => {
-              const tempVideoPath = res.tempVideoPath;
-              
-              // 保存实况视频到相册
-              wx.saveVideoToPhotosAlbum({
-                filePath: tempVideoPath,
-                success: () => {
-                  wx.showToast({
-                    title: '实况已保存到相册',
-                    icon: 'success',
-                    duration: 2000
-                  });
-                },
-                fail: (err) => {
-                  console.error('保存实况失败', err);
-                  wx.showToast({
-                    title: '保存实况失败',
-                    icon: 'none'
-                  });
-                },
-                complete: () => {
+    // 先检查录音权限
+    wx.getSetting({
+      success: (res) => {
+        if (!res.authSetting['scope.record']) {
+          // 没有录音权限，请求授权
+          wx.authorize({
+            scope: 'scope.record',
+            success: () => {
+              this.startRecording(ctx);
+            },
+            fail: () => {
+              wx.showModal({
+                title: '需要录音权限',
+                content: '实况拍摄需要录音权限，请在设置中开启',
+                confirmText: '去设置',
+                success: (modalRes) => {
+                  if (modalRes.confirm) {
+                    wx.openSetting();
+                  }
                   this.setData({ isTakingPhoto: false });
                 }
+              });
+            }
+          });
+        } else {
+          this.startRecording(ctx);
+        }
+      }
+    });
+  },
+
+  // 开始录制
+  startRecording(ctx) {
+    // 防止重复录制
+    if (this.data.isRecording) {
+      console.log('正在录制中，忽略重复调用');
+      return;
+    }
+
+    this.setData({ isRecording: true });
+
+    ctx.startRecord({
+      timeout: 10, // 设置最大录制时长为10秒
+      success: () => {
+        console.log('开始录制成功');
+        
+        // 使用计时器在2秒后停止录制
+        this.data.recordTimer = setTimeout(() => {
+          // 检查是否还在录制状态
+          if (!this.data.isRecording) {
+            console.log('录制已停止，跳过stopRecord调用');
+            return;
+          }
+
+          ctx.stopRecord({
+            success: (res) => {
+              console.log('停止录制成功', res);
+              this.setData({ 
+                isRecording: false,
+                isTakingPhoto: false 
+              });
+              
+              const tempVideoPath = res.tempVideoPath;
+              
+              // 跳转到视频预览页面
+              wx.navigateTo({
+                url: `/pages/video-preview/index?videoPath=${encodeURIComponent(tempVideoPath)}`
               });
             },
             fail: (err) => {
               console.error('停止录制失败', err);
-              wx.showToast({
-                title: '录制失败',
-                icon: 'none'
+              this.setData({ 
+                isRecording: false,
+                isTakingPhoto: false 
               });
-              this.setData({ isTakingPhoto: false });
+              wx.showToast({
+                title: '录制失败，请重试',
+                icon: 'none',
+                duration: 2000
+              });
             }
           });
-        }, 1500); // 1.5秒
+        }, 2000);
       },
       fail: (err) => {
         console.error('开始录制失败', err);
-        wx.showToast({
-          title: '录制失败',
-          icon: 'none'
+        this.setData({ 
+          isRecording: false,
+          isTakingPhoto: false 
         });
-        this.setData({ isTakingPhoto: false });
+        
+        // 根据错误类型给出不同提示
+        let errorMsg = '录制失败';
+        if (err.errMsg && err.errMsg.includes('auth')) {
+          errorMsg = '缺少录音权限';
+        } else if (err.errMsg && err.errMsg.includes('busy')) {
+          errorMsg = '相机忙碌，请稍后重试';
+        }
+        
+        wx.showToast({
+          title: errorMsg,
+          icon: 'none',
+          duration: 2000
+        });
       }
     });
   },
@@ -336,7 +438,7 @@ Page({
     // 若为后置且闪光处于打开，先确保属性应用后再拍，提升闪光触发稳定性
     if (this.data.cameraPosition === 'back' && this.data.flash === 'on') {
       this.setData({ flash: 'on' });
-      setTimeout(doTake, 120);
+      setTimeout(doTake, 100);
     } else {
       if (this.data.flash === 'on' && this.data.cameraPosition !== 'back') {
         wx.showToast({
@@ -361,6 +463,22 @@ Page({
     // 页面卸载时清除计时器
     if (this.data.countdown) {
       clearInterval(this.data.countdown);
+    }
+    // 清除录制计时器
+    if (this.data.recordTimer) {
+      clearTimeout(this.data.recordTimer);
+    }
+    // 如果正在录制，尝试停止
+    if (this.data.isRecording) {
+      const ctx = wx.createCameraContext();
+      ctx.stopRecord({
+        success: () => {
+          console.log('页面卸载时停止录制成功');
+        },
+        fail: () => {
+          console.log('页面卸载时停止录制失败');
+        }
+      });
     }
   }
 });
