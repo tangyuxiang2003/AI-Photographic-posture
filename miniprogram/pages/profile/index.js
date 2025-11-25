@@ -17,7 +17,6 @@ Page({
     themeBg: '#FFF7FA',
     palette: [
       '#FFF7FA', // 浅粉红
-    
       '#E8F7FF', // 浅蓝色
       '#F3F0FF', // 淡紫色
       '#EFFFF3', // 薄荷绿
@@ -26,8 +25,17 @@ Page({
       '#E0F2F7', // 天蓝色
       '#FCE4EC', // 樱花粉
       '#E8EAF6', // 靛蓝浅
-      
-      '#FFF9E6'  // 象牙白
+      '#FFF9E6' , // 象牙白
+      '#FFF0F5', // 淡粉色
+      '#F0F8FF', // 爱丽丝蓝
+      '#E6E6FA', // 薰衣草紫
+      '#F5FFFA', // 蜜丝佛陀绿
+      '#F8F8FF', // 雪白色
+      '#FFF5EE', // 古董白
+      '#F0FFF0', // 蜂蜜 dew
+      '#FFFAF0', // 象牙色
+      '#FAF0E6', // 亚麻色
+      '#DCDCDC', // gainsboro 灰
     ],
     themeEnabled: true,
     switchOnColor: '#07C160',
