@@ -22,7 +22,7 @@
   <!-- 中间取景区域（被上下黑区包围） -->
   <view class="camera-preview">
     <camera 
-      style="width: 100%; height: 100%;"
+      class="camera"
       device-position="{{cameraPosition}}" 
       flash="{{flash}}"
       binderror="onCameraError"
@@ -49,11 +49,11 @@
       <scroll-view scroll-x="true" class="thumbnail-scroll">
         <!-- 参考图片缩略图（如果有） -->
         <view class="thumbnail-item" wx:if="{{referenceImage}}" bindtap="onThumbnailTap" data-url="{{referenceImage}}">
-          <image src="{{referenceImage}}" mode="aspectFill"></image>
+          <image src="{{referenceImage}}" mode="aspectFill" lazy-load="{{false}}"></image>
         </view>
-        <!-- 生成的图片缩略图 -->
-        <view class="thumbnail-item" wx:for="{{generatedImages}}" wx:key="index" bindtap="onThumbnailTap" data-url="{{item}}">
-          <image src="{{item}}" mode="aspectFill"></image>
+        <!-- 生成的图片缩略图（过滤掉与参考图片相同的） -->
+        <view class="thumbnail-item" wx:for="{{generatedImages}}" wx:key="index" wx:if="{{item !== referenceImage}}" bindtap="onThumbnailTap" data-url="{{item}}">
+          <image src="{{item}}" mode="aspectFill" lazy-load="{{false}}"></image>
         </view>
       </scroll-view>
     </view>

@@ -23,8 +23,14 @@ Page({
         referenceImage: referenceImage,
         enlargedImage: referenceImage,
         isMaxEnlarged: false 
+      }, () => {
+        // 在设置参考图片后再加载生成的图片，确保过滤逻辑正确执行
+        this.loadGeneratedImages();
       });
       console.log('接收到参考图片:', referenceImage);
+    } else {
+      // 没有参考图片时也加载生成的图片
+      this.loadGeneratedImages();
     }
 
     // 申请相机权限
@@ -49,8 +55,6 @@ Page({
       }
     });
 
-    // 加载生成的图片
-    this.loadGeneratedImages();
   },
 
   onShow() {
@@ -62,9 +66,16 @@ Page({
   loadGeneratedImages() {
     try {
       const images = wx.getStorageSync('generated_images') || [];
-      this.setData({ generatedImages: Array.isArray(images) ? images : [] });
+      // 过滤掉空值、无效数据和与参考图片重复的数据
+      const validImages = (Array.isArray(images) ? images : [])
+        .filter(img => img && typeof img === 'string' && img.trim() !== '')
+        .filter(img => img !== this.data.referenceImage);
+      
+      this.setData({ generatedImages: validImages });
+      console.log('加载的有效图片数量:', validImages.length);
     } catch (e) {
       console.error('加载生成图片失败', e);
+      this.setData({ generatedImages: [] });
     }
   },
 
