@@ -182,6 +182,15 @@ Page({
     this.setData({ expectDesc: next })
   },
 
+  // 点击句子，同步到描述框（追加，且用空格分隔）
+  onTapSentence(e){
+    const sentence = e.currentTarget.dataset.sentence || ''
+    const prev = this.data.expectDesc?.trim()
+    const next = prev ? (prev + ' ' + sentence) : sentence
+    this.setData({ expectDesc: next })
+  },
+
+
   // 刷新热门词
   onRefreshChips(){
     const pool = [

@@ -44,29 +44,64 @@ Page({
       });
     }
 
-    // 申请相机权限
-    wx.authorize({
-      scope: 'scope.camera',
-      success: () => {
-        console.log('相机权限已获取');
+    // 延迟检查和申请相机权限，确保页面完全加载
+    setTimeout(() => {
+      this.checkAndAuthorizeCameraPermissions();
+    }, 300);
+  },
+
+  // 检查并申请相机相关权限
+  checkAndAuthorizeCameraPermissions() {
+    wx.getSetting({
+      success: (res) => {
+        const authSetting = res.authSetting || {};
+        
+        // 检查相机权限
+        if (authSetting['scope.camera'] === false) {
+          // 用户之前拒绝过相机权限，引导去设置页
+          this.showPermissionModal('相机权限', '拍照功能需要相机权限，请在设置中开启');
+        } else if (!authSetting['scope.camera']) {
+          // 用户尚未授权，请求授权
+          wx.authorize({
+            scope: 'scope.camera',
+            success: () => {
+              console.log('相机权限已获取');
+              // 相机权限获取成功后，继续申请其他权限
+              this.authorizeOtherPermissions();
+            },
+            fail: () => {
+              console.log('用户拒绝了相机权限');
+              this.showPermissionModal('相机权限', '拍照功能需要相机权限');
+            }
+          });
+        } else {
+          // 已有相机权限，继续申请其他权限
+          console.log('相机权限已存在');
+          this.authorizeOtherPermissions();
+        }
       },
-      fail: () => {
-        wx.showToast({
-          title: '请授予相机权限',
-          icon: 'none'
-        });
+      fail: (err) => {
+        console.error('获取设置失败', err);
+        // 获取设置失败，尝试直接申请权限
+        this.authorizeOtherPermissions();
       }
     });
-    
-    // 申请闪光灯权限
+  },
+
+  // 申请其他权限（闪光灯、录音、相册）
+  authorizeOtherPermissions() {
+    // 申请闪光灯权限（静默申请，失败不提示）
     wx.authorize({
       scope: 'scope.cameraFlash',
       success: () => {
         console.log('闪光灯权限已获取');
+      },
+      fail: () => {
+        console.log('闪光灯权限获取失败');
       }
     });
 
-    // 申请录音权限（实况录制需要）
+    // 申请录音权限（实况录制需要，静默申请）
     wx.authorize({
       scope: 'scope.record',
       success: () => {
@@ -77,7 +112,7 @@ Page({
       }
     });
 
-    // 申请保存到相册权限
+    // 申请保存到相册权限（静默申请）
     wx.authorize({
       scope: 'scope.writePhotosAlbum',
       success: () => {
@@ -87,7 +122,33 @@ Page({
         console.log('相册写入权限获取失败');
       }
     });
+  },
 
+  // 显示权限引导弹窗
+  showPermissionModal(permissionName, content) {
+    wx.showModal({
+      title: `需要${permissionName}`,
+      content: content,
+      confirmText: '去设置',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          wx.openSetting({
+            success: (settingRes) => {
+              if (settingRes.authSetting['scope.camera']) {
+                wx.showToast({
+                  title: '权限已开启',
+                  icon: 'success'
+                });
+              }
+            }
+          });
+        } else {
+          // 用户取消，返回上一页
+          wx.navigateBack();
+        }
+      }
+    });
   },
 
   onShow() {

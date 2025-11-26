@@ -17,6 +17,7 @@
   background: #000;   /* 防止闪屏时露底 */
   position: relative; /* 为九宫格提供定位参考 */
   overflow: hidden;   /* 防止内容溢出 */
+  z-index: 999;       /* 中间取景区域层级 */
 }
 
 /* 相机组件样式 - 关键修复 */
@@ -229,7 +230,7 @@
   border-radius: 16rpx;
   border: 4rpx solid #ffffff;
   overflow: hidden;
-  z-index: 100;
+  z-index: 99999;  /* 放大的参考图层级最高 */
   opacity: 0;
   transform: scale(0.8);
   transition: all 0.3s ease;
@@ -261,7 +262,7 @@
   right: 0;
   bottom: 0;
   pointer-events: none; /* 不阻挡点击事件 */
-  z-index: 50; /* 在相机上方，但在放大图下方 */
+  z-index: 9999;       /* 九宫格辅助线层级 */
 }
 
 .grid-line {

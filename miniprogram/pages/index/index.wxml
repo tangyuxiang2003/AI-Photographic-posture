@@ -65,7 +65,7 @@
     <view class="refresh-btn" bindtap="onRefreshTips">换一批</view>
   </view>
   <view class="tips" wx:if="{{homeTipsEnabled}}">
-    <view class="tips-item" wx:for="{{tipsItems}}" wx:key="*this">{{item}}</view>
+    <view class="tips-item" wx:for="{{tipsItems}}" wx:key="*this" data-sentence="{{item}}" bindtap="onTapSentence">{{item}}</view>
   </view>
 
   <!-- 选中预览（已由中间预览框替代） -->
