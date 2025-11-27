@@ -2,7 +2,10 @@
 <view class="home" style="background: {{themeBg}};">
   <!-- 欢迎文案（单行、稍加粗） -->
   <view class="welcome single">
-    欢迎使用AI拍照助手！
+    <view class="welcome-title-row">
+      <image class="welcome-icon" src="../../images/中.png" mode="aspectFit"></image>
+      <text>欢迎使用AI拍照助手！</text>
+    </view>
     <view class="welcome-sub">一起解锁属于你的个性姿势</view>
   </view>
 
