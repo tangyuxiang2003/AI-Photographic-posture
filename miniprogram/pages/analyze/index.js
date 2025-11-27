@@ -32,7 +32,8 @@ Page({
     refining: false,
     feedbackText: '',
     favMap: {},
-    aiIdMap: {} // url -> aiImageId 映射
+    aiIdMap: {}, // url -> aiImageId 映射
+    themeBg: '#FFF7FA' // 主题背景色
   },
 
   onLoad() {
@@ -74,6 +75,13 @@ Page({
       (Array.isArray(favs) ? favs : []).forEach(u => { if (u) map[u] = true; });
       this.setData({ favMap: map });
     } catch(_) {}
+    
+    // 读取并应用主题背景色
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      this.setData({ themeBg: bg });
+    } catch(_) {}
+    
     // 实时校验 token，避免因跳转过快或缓存导致误判；并加入延迟重试读取
     const header = getAuthHeader();
     const hasAuth = !!header.Authorization;

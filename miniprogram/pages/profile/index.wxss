@@ -198,7 +198,7 @@ page { background: #FFF7FA; }
   display:flex;
   flex-wrap:wrap;
   gap:14rpx;
-  padding: 10rpx 20rpx 0;
+  padding: 10rpx 20rpx 20rpx;
   box-sizing: border-box;
 }
 .color-swatch{

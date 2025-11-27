@@ -34,16 +34,33 @@ Page({
     favoriteMap: {},
     
     // 登录状态
-    isLoggedIn: false
+    isLoggedIn: false,
+    
+    // 主题背景色
+    themeBg: '#FFF7FA'
   },
 
   onLoad() {
+    // 读取主题背景色
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      this.setData({ themeBg: bg });
+    } catch (e) {}
+    
     this.checkLoginStatus()
     this.loadPoses()
     this.loadFavorites()
   },
 
   onShow() {
+    // 读取主题背景色
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      if (bg !== this.data.themeBg) {
+        this.setData({ themeBg: bg });
+      }
+    } catch (e) {}
+    
     // 每次显示页面时重新检查登录状态和收藏状态
     this.checkLoginStatus()
     this.loadFavorites()

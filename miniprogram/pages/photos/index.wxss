@@ -1,5 +1,12 @@
-page { background: transparent; }
-.wrap { padding: 32rpx; color: #7A3F60; font-size: 28rpx; min-height: 100vh; box-sizing: border-box; }
+page { background: #FFF7FA; }
+.wrap { 
+  padding: 32rpx; 
+  color: #7A3F60; 
+  font-size: 28rpx; 
+  min-height: 100vh; 
+  box-sizing: border-box;
+  /* background 由 inline style 动态设置 */
+}
 
 .stats-bar{
   display:flex; align-items:center; justify-content:space-between;

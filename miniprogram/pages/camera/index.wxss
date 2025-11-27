@@ -283,6 +283,57 @@
   left: 0;
 }
 
+/* 相机权限未授权时的占位提示 */
+.camera-auth-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+}
+
+.auth-icon {
+  font-size: 120rpx;
+  margin-bottom: 40rpx;
+  opacity: 0.6;
+}
+
+.auth-text {
+  color: #ffffff;
+  font-size: 36rpx;
+  font-weight: 500;
+  margin-bottom: 20rpx;
+}
+
+.auth-desc {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 28rpx;
+  text-align: center;
+  padding: 0 60rpx;
+  line-height: 1.6;
+  margin-bottom: 60rpx;
+}
+
+.auth-button {
+  padding: 24rpx 80rpx;
+  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
+  border-radius: 50rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 230, 118, 0.3);
+}
+
+.auth-button text {
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.auth-button:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
 
 
 

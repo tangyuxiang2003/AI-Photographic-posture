@@ -15,7 +15,9 @@ Page({
     cameraContext: null, // 相机上下文
     source: 'reference', // 来源：reference(姿势厅) 或 generated(AI生成)
     isRecording: false, // 是否正在录制
-    recordTimer: null // 录制计时器
+    recordTimer: null, // 录制计时器
+    cameraAuthorized: false, // 相机权限是否已授权
+    showAuthModal: false // 是否显示授权引导弹窗
   },
 
   onLoad(options) {
@@ -44,13 +46,11 @@ Page({
       });
     }
 
-    // 延迟检查和申请相机权限，确保页面完全加载
-    setTimeout(() => {
-      this.checkAndAuthorizeCameraPermissions();
-    }, 300);
+    // 第一时间检查并请求相机权限（非强制）
+    this.checkAndAuthorizeCameraPermissions();
   },
 
-  // 检查并申请相机相关权限
+  // 检查并申请相机相关权限（非强制）
   checkAndAuthorizeCameraPermissions() {
     wx.getSetting({
       success: (res) => {
@@ -58,32 +58,46 @@ Page({
         
         // 检查相机权限
         if (authSetting['scope.camera'] === false) {
-          // 用户之前拒绝过相机权限，引导去设置页
-          this.showPermissionModal('相机权限', '拍照功能需要相机权限，请在设置中开启');
+          // 用户之前拒绝过相机权限，显示未授权状态
+          this.setData({ cameraAuthorized: false });
+          console.log('相机权限已被拒绝，需要用户手动开启');
         } else if (!authSetting['scope.camera']) {
-          // 用户尚未授权，请求授权
+          // 用户尚未授权，第一时间弹出授权框
+          this.setData({ cameraAuthorized: false });
           wx.authorize({
             scope: 'scope.camera',
             success: () => {
               console.log('相机权限已获取');
+              this.setData({ cameraAuthorized: true });
               // 相机权限获取成功后，继续申请其他权限
               this.authorizeOtherPermissions();
             },
             fail: () => {
               console.log('用户拒绝了相机权限');
-              this.showPermissionModal('相机权限', '拍照功能需要相机权限');
+              this.setData({ cameraAuthorized: false });
+              // 用户拒绝授权，仅提示，不强制退出
+              wx.showToast({
+                title: '未授权相机权限',
+                icon: 'none',
+                duration: 2000
+              });
             }
           });
         } else {
-          // 已有相机权限，继续申请其他权限
+          // 已有相机权限，允许使用相机
           console.log('相机权限已存在');
+          this.setData({ cameraAuthorized: true });
           this.authorizeOtherPermissions();
         }
       },
       fail: (err) => {
         console.error('获取设置失败', err);
-        // 获取设置失败，尝试直接申请权限
-        this.authorizeOtherPermissions();
+        this.setData({ cameraAuthorized: false });
+        wx.showToast({
+          title: '权限检查失败',
+          icon: 'none',
+          duration: 2000
+        });
       }
     });
   },
@@ -124,28 +138,36 @@ Page({
     });
   },
 
-  // 显示权限引导弹窗
-  showPermissionModal(permissionName, content) {
-    wx.showModal({
-      title: `需要${permissionName}`,
-      content: content,
-      confirmText: '去设置',
-      cancelText: '取消',
+  // 请求相机授权（由用户主动触发）
+  requestCameraAuth() {
+    wx.getSetting({
       success: (res) => {
-        if (res.confirm) {
-          wx.openSetting({
-            success: (settingRes) => {
-              if (settingRes.authSetting['scope.camera']) {
-                wx.showToast({
-                  title: '权限已开启',
-                  icon: 'success'
+        if (res.authSetting['scope.camera'] === false) {
+          // 用户之前拒绝过，需要引导去设置页
+          wx.showModal({
+            title: '需要相机权限',
+            content: '请在设置中开启相机权限',
+            confirmText: '去设置',
+            success: (modalRes) => {
+              if (modalRes.confirm) {
+                wx.openSetting({
+                  success: (settingRes) => {
+                    if (settingRes.authSetting['scope.camera']) {
+                      this.setData({ cameraAuthorized: true });
+                      wx.showToast({
+                        title: '权限已开启',
+                        icon: 'success'
+                      });
+                      this.authorizeOtherPermissions();
+                    }
+                  }
                 });
               }
             }
           });
         } else {
-          // 用户取消，返回上一页
-          wx.navigateBack();
+          // 重新请求授权
+          this.checkAndAuthorizeCameraPermissions();
         }
       }
     });

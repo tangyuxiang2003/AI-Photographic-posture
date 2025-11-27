@@ -7,7 +7,7 @@
   };
 </wxs>
 
-<view class="analyze-wrap">
+<view class="analyze-wrap" style="background: {{themeBg}};">
   <!-- 生成中：仅显示进度卡片 -->
   <view wx:if="{{!done && !failed}}" class="progress-wrap">
     <view class="star-square">

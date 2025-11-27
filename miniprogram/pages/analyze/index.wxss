@@ -1,5 +1,11 @@
 page { background: #FFF7FA; }
-.analyze-wrap { padding: 24rpx; color: #7A3F60; font-size: 28rpx; }
+.analyze-wrap { 
+  padding: 24rpx; 
+  color: #7A3F60; 
+  font-size: 28rpx;
+  min-height: 100vh;
+  /* background 由 inline style 动态设置 */
+}
 
 /* 进度卡片（保留你的星空风格） */
 .progress-wrap {

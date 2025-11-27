@@ -7,11 +7,17 @@
   </view>
 
   <!-- 上传点击框（单入口），点击弹出相册/拍摄 -->
-  <view class="upload-box" bindtap="onTapUpload">
-    <view class="upload-center">
-      <image class="cam-svg" src="../../images/icons/camera.svg" mode="widthFix"></image>
-      <text class="upload-text">人景实照</text>
-
+  <view class="upload-outer-box">
+    <view class="upload-title">
+      <image class="title-icon-small" src="../../images/icons/camera.svg" mode="aspectFit"></image>
+      <text>上传人景实照</text>
+    </view>
+    <view class="upload-box" bindtap="onTapUpload">
+      <view class="upload-center">
+        <image class="cam-svg" src="../../images/icons/camera.svg" mode="widthFix"></image>
+        <text class="upload-text">点击上传照片</text>
+        <text class="upload-hint">支持JPG、PNG格式</text>
+      </view>
     </view>
   </view>
 
@@ -40,20 +46,29 @@
   </view>
 
   <!-- 大号文本输入框 -->
-  <textarea class="desc-input"
-            placeholder="尽可能描述详细 如：风格 情绪 姿势 性别 氛围......"
-            maxlength="200"
-            auto-height="true"
-            value="{{expectDesc}}"
-            bindinput="onDescInput"></textarea>
+  <view class="desc-outer-box">
+    <view class="desc-title">描述你想要的姿势</view>
+    <textarea class="desc-input"
+              placeholder="例如：坐姿侧拍 双手比耶"
+              maxlength="200"
+              auto-height="true"
+              value="{{expectDesc}}"
+              bindinput="onDescInput"></textarea>
+  </view>
 
   <!-- 开始分析按钮（位于描述框下方） -->
   <button class="analyze-btn" bindtap="onAnalyze">开始分析</button>
 
   <!-- 热门姿势关键词（少女风粉色标签） -->
   <view class="section-title" wx:if="{{homeTipsEnabled}}">
-    <text>热门姿势关键词</text>
-    <view class="refresh-btn" bindtap="onRefreshChips">换一批</view>
+    <view class="title-with-icon">
+      <image class="title-icon" src="../../images/中.png" mode="aspectFit"></image>
+      <text>热门姿势关键词</text>
+    </view>
+    <view class="refresh-btn" bindtap="onRefreshChips">
+      <text class="refresh-icon">↻</text>
+      <text>换一批</text>
+    </view>
   </view>
   <view class="chip-wrap" wx:if="{{homeTipsEnabled}}">
     <text class="chip" wx:for="{{hotChips}}" wx:key="*this" data-word="{{item}}" bindtap="onTapChip">{{item}}</text>
@@ -61,8 +76,14 @@
 
   <!-- 拍照小贴士（柔和卡片） -->
   <view class="section-title" wx:if="{{homeTipsEnabled}}">
-    <text>姿势句子灵感</text>
-    <view class="refresh-btn" bindtap="onRefreshTips">换一批</view>
+    <view class="title-with-icon">
+      <image class="title-icon" src="../../images/底.png" mode="aspectFit"></image>
+      <text>姿势句子灵感</text>
+    </view>
+    <view class="refresh-btn" bindtap="onRefreshTips">
+      <text class="refresh-icon">↻</text>
+      <text>换一批</text>
+    </view>
   </view>
   <view class="tips" wx:if="{{homeTipsEnabled}}">
     <view class="tips-item" wx:for="{{tipsItems}}" wx:key="*this" data-sentence="{{item}}" bindtap="onTapSentence">{{item}}</view>

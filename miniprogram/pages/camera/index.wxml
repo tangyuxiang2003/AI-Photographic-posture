@@ -21,12 +21,24 @@
 
   <!-- 中间取景区域（被上下黑区包围） -->
   <view class="camera-preview">
+    <!-- 只有获得相机权限后才显示相机组件 -->
     <camera 
+      wx:if="{{cameraAuthorized}}"
       class="camera"
       device-position="{{cameraPosition}}" 
       flash="{{flash}}"
       binderror="onCameraError"
     ></camera>
+    
+    <!-- 未授权时显示提示信息 -->
+    <view wx:else class="camera-auth-placeholder">
+      <view class="auth-icon">📷</view>
+      <view class="auth-text">需要相机权限</view>
+      <view class="auth-desc">请授权后使用拍照功能</view>
+      <view class="auth-button" bindtap="requestCameraAuth">
+        <text>授权相机</text>
+      </view>
+    </view>
     
     <!-- 九宫格辅助线 -->
     <view class="grid-overlay">
