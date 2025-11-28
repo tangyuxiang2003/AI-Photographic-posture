@@ -123,14 +123,6 @@
       <view class="action-right"><text class="action-arrow">›</text></view>
     </view>
 
-    <!-- 5. 设置中心 -->
-    <view class="action-item">
-      <view class="action-left">
-        <image class="action-icon" src="../../images/icons/setting.svg" mode="aspectFit"></image>
-        <view class="action-text">设置中心</view>
-      </view>
-      <view class="action-right"><text class="action-arrow">›</text></view>
-    </view>
     <!-- 6. 关于 -->
     <view class="action-item">
       <view class="action-left">

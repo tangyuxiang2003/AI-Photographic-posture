@@ -52,7 +52,7 @@
   <view class="desc-outer-box">
     <view class="desc-title">描述你想要的姿势</view>
     <textarea class="desc-input"
-              placeholder="例如：坐姿侧拍 双手比耶"
+              placeholder="描述你想要的如：风格,场景,氛围, 性别, 情绪 等..."
               maxlength="200"
               auto-height="true"
               value="{{expectDesc}}"
