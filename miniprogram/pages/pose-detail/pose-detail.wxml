@@ -26,6 +26,6 @@
 
   <!-- 底部按钮 -->
   <view class="bottom-actions">
-    <button class="use-btn" bindtap="onUse">使用这个姿势拍摄</button>
+    <button class="use-btn" style="background: {{themeBg}}; color: {{btnTextColor}};" bindtap="onUse">使用这个姿势拍摄</button>
   </view>
 </view>

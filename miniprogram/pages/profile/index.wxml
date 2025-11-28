@@ -48,7 +48,7 @@
   <view class="stats-card">
     <view class="stat-item">
       <view class="stat-num">{{stats.photos}}</view>
-      <view class="stat-label">照片</view>
+      <view class="stat-label">上次生成</view>
     </view>
     <view class="stat-item">
       <view class="stat-num">{{stats.favorites}}</view>

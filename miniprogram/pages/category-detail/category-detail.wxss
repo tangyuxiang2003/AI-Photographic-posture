@@ -112,13 +112,12 @@
 
 .use-btn {
   width: 60%;
-  background: linear-gradient(135deg, #FFB800 0%, #FFA000 100%);
-  color: #fff;
+  /* background 和 color 由 inline style 动态设置 */
   border: none;
   border-radius: 48rpx;
   padding: 16rpx 0;
   font-size: 28rpx;
   font-weight: 600;
-  box-shadow: 0 4rpx 12rpx rgba(255, 160, 0, 0.3);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 

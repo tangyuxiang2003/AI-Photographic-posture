@@ -10,10 +10,19 @@ Page({
     menuButtonHeight: 0,
     headerHeight: 0,
     favoriteMap: {},
-    isLoggedIn: false
+    isLoggedIn: false,
+    themeBg: '#FFF7FA',
+    btnTextColor: '#000000'
   },
 
   onLoad(options) {
+    // 同步主题背景
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      const textColor = this.getContrastingText(bg);
+      this.setData({ themeBg: bg, btnTextColor: textColor });
+    } catch (e) {}
+
     const tag = decodeURIComponent(options.tag || '')
     
     // 获取系统信息和胶囊按钮信息
@@ -48,9 +57,36 @@ Page({
   },
 
   onShow() {
+    // 同步主题背景
+    try {
+      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
+      const textColor = this.getContrastingText(bg);
+      this.setData({ themeBg: bg, btnTextColor: textColor });
+    } catch (e) {}
+
     // 每次显示页面时重新检查登录状态和收藏状态
     this.checkLoginStatus()
     this.loadFavorites()
+  },
+
+  // 根据背景色自动选择黑/白前景色
+  getContrastingText(hex) {
+    const norm = (h) => {
+      if (!h) return '#000000';
+      let s = h.toString().trim();
+      if (s[0] !== '#') s = '#' + s;
+      if (s.length === 4) {
+        const r = s[1], g = s[2], b = s[3];
+        s = '#' + r + r + g + g + b + b;
+      }
+      return s.slice(0, 7);
+    };
+    const c = norm(hex);
+    const r = parseInt(c.substr(1, 2), 16);
+    const g = parseInt(c.substr(3, 2), 16);
+    const b = parseInt(c.substr(5, 2), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 160 ? '#000000' : '#ffffff';
   },
 
   // 检查登录状态

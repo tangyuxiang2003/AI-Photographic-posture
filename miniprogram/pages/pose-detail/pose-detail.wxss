@@ -98,12 +98,11 @@
 
 .use-btn {
   width: 100%;
-  background: #FAFAD2;
-  color: #8B7355;
+  /* background 和 color 由 inline style 动态设置 */
   border: none;
   border-radius: 48rpx;
   padding: 28rpx 0;
   font-size: 32rpx;
   font-weight: 600;
-  box-shadow: 0 4rpx 12rpx rgba(250, 250, 210, 0.4);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }

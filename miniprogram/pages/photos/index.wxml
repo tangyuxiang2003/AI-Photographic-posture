@@ -1,17 +1,20 @@
 <view class="wrap" style="background: {{themeBg}};">
-  <!-- 统计与操作 -->
-  <view class="stats-bar">
-    <view class="stats-text">已收藏：{{favorites.length}} 条</view>
-    <button class="refresh-btn" bindtap="onShuffle">换一批推荐</button>
+  <!-- 标题栏 -->
+  <view class="header-bar">
+    <view class="page-title">收藏</view>
+    <view class="stats-text">已收藏：<text class="stats-num">{{favorites.length}}</text> 条</view>
   </view>
 
-  <!-- 搜索 -->
+  <!-- 搜索与操作 -->
   <view class="search-bar">
     <input class="search-input"
            placeholder="搜索关键词，如 韩系 / 花墙 / 回眸"
            value="{{query}}"
            bindinput="onSearchInput" />
-    <button class="search-clear" wx:if="{{query}}" bindtap="onClearSearch">清除</button>
+    <button class="refresh-btn" bindtap="onShuffle">
+      <image class="refresh-icon" src="/images/换一批推荐.png" mode="aspectFit"></image>
+      <text>换一批推荐</text>
+    </button>
   </view>
 
   <!-- 列表 -->
@@ -27,9 +30,18 @@
             <text class="tag-empty" wx:if="{{!item.tags || item.tags.length === 0}}">未设置</text>
           </view>
           <view class="actions">
-            <button class="btn unfav" data-id="{{item.id}}" bindtap="onToggleFavorite">取消收藏</button>
-            <button class="btn share" data-id="{{item.id}}" open-type="share">分享</button>
-            <button class="btn edit" data-id="{{item.id}}" bindtap="onOpenTagEditor">编辑风格</button>
+            <button class="btn unfav" data-id="{{item.id}}" bindtap="onToggleFavorite">
+              <image class="btn-icon" src="/images/取消.png" mode="aspectFit"></image>
+              <text>取消收藏</text>
+            </button>
+            <button class="btn share" data-id="{{item.id}}" open-type="share">
+              <image class="btn-icon" src="/images/分享-copy.png" mode="aspectFit"></image>
+              <text>分享</text>
+            </button>
+            <button class="btn edit" data-id="{{item.id}}" bindtap="onOpenTagEditor">
+              <image class="btn-icon" src="/images/编辑.png" mode="aspectFit"></image>
+              <text>编辑风格</text>
+            </button>
           </view>
         </view>
       </view>

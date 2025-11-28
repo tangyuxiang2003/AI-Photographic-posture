@@ -33,7 +33,7 @@
         </view>
         
         <view class="pose-overlay">
-          <button class="use-btn" catchtap="onUse" data-pose="{{item}}">使用</button>
+          <button class="use-btn" style="background: {{themeBg}}; color: {{btnTextColor}};" catchtap="onUse" data-pose="{{item}}">使用</button>
         </view>
       </view>
     </view>
