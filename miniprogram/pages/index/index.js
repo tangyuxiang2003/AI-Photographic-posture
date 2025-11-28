@@ -447,6 +447,7 @@ Page({
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
       if (bg !== this.data.themeBg) this.setData({ themeBg: bg });
+      this.applyThemeColor(bg);
     } catch (e) {}
     // 同步个人中心开关
     try {

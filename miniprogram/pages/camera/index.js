@@ -17,7 +17,16 @@ Page({
     isRecording: false, // 是否正在录制
     recordTimer: null, // 录制计时器
     cameraAuthorized: false, // 相机权限是否已授权
-    showAuthModal: false // 是否显示授权引导弹窗
+    showAuthModal: false, // 是否显示授权引导弹窗
+    // 图片缩放相关
+    imageScale: 1, // 图片缩放比例
+    imageTranslateX: 0, // 图片X轴偏移
+    imageTranslateY: 0, // 图片Y轴偏移
+    touchStartDistance: 0, // 双指起始距离
+    touchStartScale: 1, // 触摸开始时的缩放比例
+    touchStartX: 0, // 单指触摸起始X坐标
+    touchStartY: 0, // 单指触摸起始Y坐标
+    lastTapTime: 0 // 上次点击时间（用于双击检测）
   },
 
   onLoad(options) {
@@ -281,6 +290,97 @@ Page({
       // 如果是普通放大状态，切换到最大放大
       this.setData({ isMaxEnlarged: true });
     }
+  },
+
+  // 触摸开始
+  onTouchStart(e) {
+    const touches = e.touches;
+    
+    if (touches.length === 2) {
+      // 双指缩放
+      const distance = this.getDistance(touches[0], touches[1]);
+      this.setData({
+        touchStartDistance: distance,
+        touchStartScale: this.data.imageScale
+      });
+    } else if (touches.length === 1) {
+      // 记录单指触摸起始位置
+      this.setData({
+        touchStartX: touches[0].clientX,
+        touchStartY: touches[0].clientY
+      });
+    }
+  },
+
+  // 触摸移动
+  onTouchMove(e) {
+    const touches = e.touches;
+    
+    if (touches.length === 2) {
+      // 双指缩放
+      const distance = this.getDistance(touches[0], touches[1]);
+      const scale = (distance / this.data.touchStartDistance) * this.data.touchStartScale;
+      
+      // 限制缩放范围 0.5 - 3
+      const finalScale = Math.max(0.5, Math.min(3, scale));
+      
+      this.setData({
+        imageScale: finalScale
+      });
+    } else if (touches.length === 1 && this.data.imageScale > 1) {
+      // 单指拖动（仅在放大时允许）
+      const deltaX = touches[0].clientX - this.data.touchStartX;
+      const deltaY = touches[0].clientY - this.data.touchStartY;
+      
+      this.setData({
+        imageTranslateX: this.data.imageTranslateX + deltaX,
+        imageTranslateY: this.data.imageTranslateY + deltaY,
+        touchStartX: touches[0].clientX,
+        touchStartY: touches[0].clientY
+      });
+    }
+  },
+
+  // 触摸结束
+  onTouchEnd(e) {
+    const touches = e.changedTouches;
+    
+    // 如果是单指点击（没有移动太多距离）
+    if (touches.length === 1) {
+      const deltaX = Math.abs(touches[0].clientX - this.data.touchStartX);
+      const deltaY = Math.abs(touches[0].clientY - this.data.touchStartY);
+      
+      // 判断是否为点击（移动距离小于10px）
+      if (deltaX < 10 && deltaY < 10) {
+        // 单击：切换放大状态
+        if (this.data.isMaxEnlarged) {
+          this.setData({ 
+            isMaxEnlarged: false,
+            imageScale: 1,
+            imageTranslateX: 0,
+            imageTranslateY: 0
+          });
+        } else {
+          this.setData({ isMaxEnlarged: true });
+        }
+      }
+    }
+    
+    // 如果缩放比例小于1，重置为1
+    if (this.data.imageScale < 1) {
+      this.setData({
+        imageScale: 1,
+        imageTranslateX: 0,
+        imageTranslateY: 0
+      });
+    }
+  },
+
+  // 计算两点之间的距离
+  getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
   },
 
   // 阻止事件冒泡

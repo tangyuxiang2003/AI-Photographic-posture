@@ -41,8 +41,8 @@
       {
         "pagePath": "pages/photos/index",
         "text": "收藏",
-        "iconPath": "images/icons/goods.png",
-        "selectedIconPath": "images/icons/goods-active.png"
+        "iconPath": "images/收藏-off.png",
+        "selectedIconPath": "images/收藏-on.png"
       },
       {
         "pagePath": "pages/profile/index",

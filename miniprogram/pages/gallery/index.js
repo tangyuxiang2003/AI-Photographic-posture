@@ -45,6 +45,7 @@ Page({
     try {
       const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
       this.setData({ themeBg: bg });
+      this.applyThemeColor(bg);
     } catch (e) {}
     
     this.checkLoginStatus()
@@ -59,6 +60,7 @@ Page({
       if (bg !== this.data.themeBg) {
         this.setData({ themeBg: bg });
       }
+      this.applyThemeColor(bg);
     } catch (e) {}
     
     // 每次显示页面时重新检查登录状态和收藏状态
@@ -70,6 +72,45 @@ Page({
   checkLoginStatus() {
     const isLoggedIn = authUtil.isLoggedIn()
     this.setData({ isLoggedIn })
+  },
+
+  // 应用主题背景到导航栏、页面与底部tabBar
+  applyThemeColor(backgroundColor) {
+    const frontColor = this.getContrastingText(backgroundColor);
+    try {
+      wx.setNavigationBarColor({
+        frontColor,
+        backgroundColor,
+        animation: { duration: 200, timingFunc: 'easeIn' }
+      });
+    } catch (e) {}
+    // 同步 tabBar 背景
+    try {
+      wx.setTabBarStyle({
+        backgroundColor,
+        borderStyle: frontColor === '#ffffff' ? 'white' : 'black',
+        color: frontColor === '#ffffff' ? '#e6e6e6' : '#666666',
+        selectedColor: '#07C160'
+      });
+    } catch (e) {}
+    try {
+      wx.setBackgroundColor({
+        backgroundColor,
+        backgroundColorTop: backgroundColor,
+        backgroundColorBottom: backgroundColor
+      });
+    } catch (e) {}
+  },
+
+  // 根据背景色计算对比文字颜色
+  getContrastingText(bgColor) {
+    if (!bgColor || bgColor === 'transparent') return '#000000';
+    const hex = bgColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 128 ? '#000000' : '#ffffff';
   },
 
   // 加载收藏状态（从服务器获取）
