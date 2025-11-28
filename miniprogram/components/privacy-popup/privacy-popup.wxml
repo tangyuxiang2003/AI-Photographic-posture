@@ -1,0 +1,33 @@
+<!-- 隐私协议弹窗 -->
+<view class="privacy-popup" wx:if="{{showPrivacy}}">
+  <view class="privacy-mask"></view>
+  <view class="privacy-content">
+    <view class="privacy-title">用户隐私保护提示</view>
+    <view class="privacy-text">
+      感谢您使用AI拍姿助手！在使用我们的服务前，请您阅读并同意
+      <text class="privacy-link" bindtap="openPrivacyContract">《用户隐私保护指引》</text>
+    </view>
+    <view class="privacy-text">
+      我们将严格按照相关法律法规和隐私政策保护您的个人信息。
+    </view>
+    <view class="privacy-desc">
+      本小程序需要获取以下权限：
+    </view>
+    <view class="privacy-list">
+      <view class="privacy-item">• 相机权限：用于拍照和录制视频</view>
+      <view class="privacy-item">• 相册权限：用于保存照片和视频</view>
+      <view class="privacy-item">• 录音权限：用于实况拍摄功能</view>
+    </view>
+    <view class="privacy-buttons">
+      <button class="privacy-btn reject-btn" bindtap="handleDisagree">拒绝</button>
+      <button 
+        class="privacy-btn agree-btn" 
+        id="agree-btn"
+        open-type="agreePrivacyAuthorization"
+        bindagreeprivacyauthorization="handleAgree"
+      >
+        同意
+      </button>
+    </view>
+  </view>
+</view>

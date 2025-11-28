@@ -1,43 +1,35 @@
 // app.js
 App({
-  onLaunch: function () {
-    this.globalData = {
-      // env 参数说明：
-      //   env 参数决定接下来小程序发起的云开发调用（wx.cloud.xxx）会默认请求到哪个云环境的资源
-      //   此处请填入环境 ID, 环境 ID 可打开云控制台查看
-      //   如不填则使用默认环境（第一个创建的环境）
-      env: "",
-      themeBg: '#FFF7FA'
-    };
-    // 云开发已停用：不再初始化 wx.cloud，保留全局配置占位
-    this.globalData.env = this.globalData.env;
-    
-    // 初始化主题色
-    this.initTheme();
+  onLaunch() {
+    // 检查隐私协议
+    this.checkPrivacyAuthorization();
   },
-  
-  // 初始化主题
-  initTheme() {
-    try {
-      const bg = wx.getStorageSync('theme_bg') || '#FFF7FA';
-      this.globalData.themeBg = bg;
-    } catch (e) {
-      console.error('初始化主题失败:', e);
+
+  // 检查并处理隐私协议
+  checkPrivacyAuthorization() {
+    if (wx.getPrivacySetting) {
+      wx.getPrivacySetting({
+        success: res => {
+          console.log('隐私协议状态:', res);
+          // needAuthorization 表示需要弹出隐私协议
+          if (res.needAuthorization) {
+            // 需要用户同意隐私协议
+            console.log('需要用户同意隐私协议');
+          } else {
+            // 用户已经同意过隐私协议
+            console.log('用户已同意隐私协议');
+          }
+        },
+        fail: err => {
+          console.error('获取隐私设置失败:', err);
+        }
+      });
+    } else {
+      console.log('当前基础库版本不支持隐私协议API');
     }
   },
-  
-  // 获取主题色
-  getTheme() {
-    return this.globalData.themeBg || '#FFF7FA';
-  },
-  
-  // 设置主题色
-  setTheme(color) {
-    this.globalData.themeBg = color;
-    try {
-      wx.setStorageSync('theme_bg', color);
-    } catch (e) {
-      console.error('保存主题失败:', e);
-    }
+
+  globalData: {
+    userInfo: null
   }
 });

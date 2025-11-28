@@ -1,4 +1,7 @@
  <!-- camera.wxml -->
+<!-- 隐私协议弹窗 -->
+<privacy-popup binddisagree="onPrivacyDisagree"></privacy-popup>
+
 <view class="camera-container" bindtap="onScreenTap">
   <!-- 顶部黑色功能区 -->
   <view class="top-controls">

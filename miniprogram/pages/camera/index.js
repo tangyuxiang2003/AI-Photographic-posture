@@ -46,10 +46,16 @@ Page({
       });
     }
 
-    // 延迟检查权限，确保页面渲染完成
+    // 延迟检查权限，确保页面渲染完成和隐私协议处理完成
     setTimeout(() => {
       this.checkAndAuthorizeCameraPermissions();
-    }, 300);
+    }, 500);
+  },
+
+  // 处理隐私协议拒绝
+  onPrivacyDisagree() {
+    console.log('用户拒绝隐私协议');
+    // 隐私弹窗组件会自动处理返回逻辑
   },
 
   // 检查并申请相机相关权限（非强制）
